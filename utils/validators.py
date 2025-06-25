@@ -475,3 +475,68 @@ def create_context(
     context.update(kwargs)
     
     return context
+
+
+# Configuration Models
+
+class CustomerIOConfig(BaseModel):
+    """Type-safe configuration class for Customer.IO API settings."""
+    
+    api_key: str = Field(..., description="Customer.IO API key")
+    region: str = Field(default="us", description="API region")
+    
+    # Rate limiting configuration (class variables)
+    RATE_LIMIT_REQUESTS: int = 3000
+    RATE_LIMIT_WINDOW: int = 3  # seconds
+    
+    # Request size limits
+    MAX_REQUEST_SIZE: int = 32 * 1024  # 32KB
+    MAX_BATCH_SIZE: int = 500 * 1024   # 500KB
+    
+    # Retry configuration
+    MAX_RETRIES: int = 3
+    RETRY_BACKOFF_FACTOR: float = 2.0
+    
+    @validator('api_key')
+    def validate_api_key(cls, v: str) -> str:
+        """Validate API key format."""
+        if not v or len(v.strip()) == 0:
+            raise ValueError("API key cannot be empty")
+        if len(v) < 10:  # Reasonable minimum length
+            raise ValueError("API key appears to be too short")
+        return v.strip()
+    
+    @validator('region')
+    def validate_region(cls, v: str) -> str:
+        """Validate and normalize region."""
+        normalized = v.lower()
+        if normalized not in ["us", "eu"]:
+            raise ValueError("Region must be 'us' or 'eu'")
+        return normalized
+    
+    @property
+    def base_url(self) -> str:
+        """Get base URL based on region."""
+        if self.region == "eu":
+            return "https://cdp-eu.customer.io/v1"
+        else:
+            return "https://cdp.customer.io/v1"
+    
+    def get_headers(self) -> Dict[str, str]:
+        """Get HTTP headers for API requests."""
+        import base64
+        
+        # Customer.IO uses Basic Auth with API key as username, empty password
+        auth_string = base64.b64encode(f"{self.api_key}:".encode()).decode()
+        
+        return {
+            "Authorization": f"Basic {auth_string}",
+            "Content-Type": "application/json",
+            "User-Agent": "CustomerIO-Databricks-Notebooks/1.0.0",
+            "Accept": "application/json"
+        }
+    
+    class Config:
+        """Pydantic model configuration."""
+        validate_assignment = True
+        extra = "forbid"
