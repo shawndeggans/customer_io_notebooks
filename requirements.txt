@@ -1,0 +1,39 @@
+# Customer.IO Data Pipelines API - Dependencies
+# Core dependencies for Customer.IO API client and utilities
+
+# Data validation and parsing
+pydantic>=2.0.0
+
+# HTTP client for API calls
+httpx>=0.25.0
+
+# Structured logging
+structlog>=24.0.0
+
+# Data manipulation and analysis
+pandas>=2.0.0
+
+# System and process monitoring
+psutil>=5.9.0
+
+# Testing framework and utilities
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.11.1
+
+# Type checking and code quality
+mypy>=1.8.0
+
+# Code formatting and linting
+ruff>=0.1.9
+
+# Optional: PySpark for Databricks integration (commented out for local testing)
+# pyspark>=3.5.0
+
+# Data generation for testing
+faker>=24.0.0
+
+# Development dependencies
+jupyter>=1.0.0
+jupyterlab>=4.0.0
