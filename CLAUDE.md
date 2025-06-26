@@ -515,7 +515,6 @@ When resuming work:
 
 ## Notebook Quality Standards
 - Every notebook must run sequentially from top to bottom
-- Follow the 6-section advanced pattern structure
 - Extract Manager classes to utils modules with comprehensive tests
 - Implement proper error handling and logging
 - Include comprehensive documentation and examples

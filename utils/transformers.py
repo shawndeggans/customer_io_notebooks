@@ -10,9 +10,16 @@ from typing import Dict, List, Optional, Any, Union
 import json
 import uuid
 
-from pyspark.sql import DataFrame as SparkDataFrame
-from pyspark.sql.types import StructType, StructField, StringType, TimestampType, MapType
-from pyspark.sql import functions as F
+# Optional PySpark imports for Databricks environments
+try:
+    from pyspark.sql import DataFrame as SparkDataFrame
+    from pyspark.sql.types import StructType, StructField, StringType, TimestampType, MapType
+    from pyspark.sql import functions as F
+    PYSPARK_AVAILABLE = True
+except ImportError:
+    SparkDataFrame = None
+    PYSPARK_AVAILABLE = False
+
 import pandas as pd
 
 
@@ -21,7 +28,7 @@ class CustomerTransformer:
     
     @staticmethod
     def spark_to_identify_requests(
-        df: SparkDataFrame,
+        df,  # Type hint removed for optional PySpark
         user_id_col: str = "user_id",
         email_col: str = "email",
         traits_cols: List[str] = None,
@@ -39,7 +46,15 @@ class CustomerTransformer:
             
         Returns:
             List of identify request dictionaries
+            
+        Raises:
+            ImportError: If PySpark is not available
         """
+        if not PYSPARK_AVAILABLE:
+            raise ImportError("PySpark is required for spark_to_identify_requests but is not installed")
+            
+        if not hasattr(df, 'collect'):
+            raise ValueError("Input must be a Spark DataFrame")
         # Collect data to driver (be careful with large datasets)
         rows = df.collect()
         requests = []

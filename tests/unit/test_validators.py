@@ -197,7 +197,7 @@ class TestTrackRequest:
         """Test track fails without event name."""
         data = {"userId": "user_123"}
         
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             TrackRequest(**data)
     
     def test_track_empty_event_name(self):
@@ -257,7 +257,7 @@ class TestGroupRequest:
         """Test group fails without group ID."""
         data = {"userId": "user_123"}
         
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             GroupRequest(**data)
     
     def test_group_empty_group_id(self):
@@ -365,7 +365,7 @@ class TestDeviceRequest:
     
     def test_device_requires_device_info(self):
         """Test device fails without device info."""
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             DeviceRequest()
     
     def test_device_empty_device_info(self):
@@ -440,7 +440,7 @@ class TestBatchRequest:
     
     def test_batch_requires_batch_data(self):
         """Test batch fails without batch data."""
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             BatchRequest()
     
     def test_batch_empty_batch_data(self):
@@ -558,14 +558,14 @@ class TestOrderCompletedProperties:
         """Test order completed fails without order ID."""
         data = {"total": 99.99}
         
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             OrderCompletedProperties(**data)
     
     def test_order_completed_requires_total(self):
         """Test order completed fails without total."""
         data = {"order_id": "order_123"}
         
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             OrderCompletedProperties(**data)
     
     def test_order_completed_empty_order_id(self):
@@ -604,7 +604,7 @@ class TestProductViewedProperties:
     
     def test_product_viewed_requires_product_id(self):
         """Test product viewed fails without product ID."""
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             ProductViewedProperties()
     
     def test_product_viewed_empty_product_id(self):

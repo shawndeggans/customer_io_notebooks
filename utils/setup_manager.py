@@ -24,14 +24,21 @@ import base64
 import secrets
 import structlog
 
-# Databricks and Spark imports
-from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.types import (
-    StructType, StructField, StringType, IntegerType, 
-    TimestampType, BooleanType, DoubleType, ArrayType, MapType
-)
-from pyspark.sql import functions as F
-from delta.tables import DeltaTable
+# Optional Databricks and Spark imports
+try:
+    from pyspark.sql import SparkSession, DataFrame
+    from pyspark.sql.types import (
+        StructType, StructField, StringType, IntegerType, 
+        TimestampType, BooleanType, DoubleType, ArrayType, MapType
+    )
+    from pyspark.sql import functions as F
+    from delta.tables import DeltaTable
+    PYSPARK_AVAILABLE = True
+except ImportError:
+    SparkSession = None
+    DataFrame = None
+    DeltaTable = None
+    PYSPARK_AVAILABLE = False
 
 # HTTP and validation libraries
 import httpx
@@ -288,8 +295,10 @@ class SchemaManager:
         self.logger = structlog.get_logger("schema_manager")
     
     @property
-    def customers_schema(self) -> StructType:
+    def customers_schema(self):
         """Schema for customers table (aligns with /identify endpoint)."""
+        if not PYSPARK_AVAILABLE:
+            raise ImportError("PySpark is required for schema operations but is not installed")
         return StructType([
             StructField("customer_id", StringType(), False),
             StructField("user_id", StringType(), True),
@@ -306,8 +315,10 @@ class SchemaManager:
         ])
     
     @property
-    def events_schema(self) -> StructType:
+    def events_schema(self):
         """Schema for events table (aligns with /track endpoint)."""
+        if not PYSPARK_AVAILABLE:
+            raise ImportError("PySpark is required for schema operations but is not installed")
         return StructType([
             StructField("event_id", StringType(), False),
             StructField("customer_id", StringType(), True),
@@ -324,8 +335,10 @@ class SchemaManager:
         ])
     
     @property
-    def groups_schema(self) -> StructType:
+    def groups_schema(self):
         """Schema for groups table (aligns with /group endpoint)."""
+        if not PYSPARK_AVAILABLE:
+            raise ImportError("PySpark is required for schema operations but is not installed")
         return StructType([
             StructField("group_id", StringType(), False),
             StructField("group_type", StringType(), True),
@@ -338,8 +351,10 @@ class SchemaManager:
         ])
     
     @property
-    def devices_schema(self) -> StructType:
+    def devices_schema(self):
         """Schema for devices table (device management)."""
+        if not PYSPARK_AVAILABLE:
+            raise ImportError("PySpark is required for schema operations but is not installed")
         return StructType([
             StructField("device_id", StringType(), False),
             StructField("customer_id", StringType(), False),
@@ -354,8 +369,10 @@ class SchemaManager:
         ])
     
     @property
-    def api_responses_schema(self) -> StructType:
+    def api_responses_schema(self):
         """Schema for API responses (logging and monitoring)."""
+        if not PYSPARK_AVAILABLE:
+            raise ImportError("PySpark is required for schema operations but is not installed")
         return StructType([
             StructField("request_id", StringType(), False),
             StructField("endpoint", StringType(), False),
@@ -371,8 +388,10 @@ class SchemaManager:
         ])
     
     @property
-    def batch_operations_schema(self) -> StructType:
+    def batch_operations_schema(self):
         """Schema for batch operations tracking."""
+        if not PYSPARK_AVAILABLE:
+            raise ImportError("PySpark is required for schema operations but is not installed")
         return StructType([
             StructField("batch_id", StringType(), False),
             StructField("operation_type", StringType(), False),
@@ -385,7 +404,7 @@ class SchemaManager:
             StructField("error_summary", ArrayType(StringType()), True)
         ])
     
-    def get_all_schemas(self) -> Dict[str, StructType]:
+    def get_all_schemas(self):
         """Get all schemas as a dictionary."""
         return {
             "customers": self.customers_schema,

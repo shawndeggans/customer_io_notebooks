@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Any, Union
 import re
 
-from pydantic import BaseModel, Field, validator, root_validator
+from pydantic import BaseModel, Field, validator, model_validator, ValidationError
 
 
 class IdentifyRequest(BaseModel):
@@ -21,16 +21,12 @@ class IdentifyRequest(BaseModel):
     timestamp: Optional[datetime] = Field(None, description="Event timestamp")
     context: Optional[Dict[str, Any]] = Field(None, description="Additional context data")
     
-    @root_validator
-    def validate_user_identification(cls, values):
+    @model_validator(mode='after')
+    def validate_user_identification(self):
         """Ensure either userId or anonymousId is provided."""
-        user_id = values.get('userId')
-        anonymous_id = values.get('anonymousId')
-        
-        if not user_id and not anonymous_id:
+        if not self.userId and not self.anonymousId:
             raise ValueError('Either userId or anonymousId must be provided')
-        
-        return values
+        return self
     
     @validator('userId')
     def validate_user_id(cls, v):
@@ -74,16 +70,12 @@ class TrackRequest(BaseModel):
     timestamp: Optional[datetime] = Field(None, description="Event timestamp")
     context: Optional[Dict[str, Any]] = Field(None, description="Additional context data")
     
-    @root_validator
-    def validate_user_identification(cls, values):
+    @model_validator(mode='after')
+    def validate_user_identification(self):
         """Ensure either userId or anonymousId is provided."""
-        user_id = values.get('userId')
-        anonymous_id = values.get('anonymousId')
-        
-        if not user_id and not anonymous_id:
+        if not self.userId and not self.anonymousId:
             raise ValueError('Either userId or anonymousId must be provided')
-        
-        return values
+        return self
     
     @validator('event')
     def validate_event_name(cls, v):
@@ -105,16 +97,12 @@ class GroupRequest(BaseModel):
     timestamp: Optional[datetime] = Field(None, description="Event timestamp")
     context: Optional[Dict[str, Any]] = Field(None, description="Additional context data")
     
-    @root_validator
-    def validate_user_identification(cls, values):
+    @model_validator(mode='after')
+    def validate_user_identification(self):
         """Ensure either userId or anonymousId is provided."""
-        user_id = values.get('userId')
-        anonymous_id = values.get('anonymousId')
-        
-        if not user_id and not anonymous_id:
+        if not self.userId and not self.anonymousId:
             raise ValueError('Either userId or anonymousId must be provided')
-        
-        return values
+        return self
     
     @validator('groupId')
     def validate_group_id(cls, v):
@@ -136,16 +124,12 @@ class PageRequest(BaseModel):
     timestamp: Optional[datetime] = Field(None, description="Event timestamp")
     context: Optional[Dict[str, Any]] = Field(None, description="Additional context data")
     
-    @root_validator
-    def validate_user_identification(cls, values):
+    @model_validator(mode='after')
+    def validate_user_identification(self):
         """Ensure either userId or anonymousId is provided."""
-        user_id = values.get('userId')
-        anonymous_id = values.get('anonymousId')
-        
-        if not user_id and not anonymous_id:
+        if not self.userId and not self.anonymousId:
             raise ValueError('Either userId or anonymousId must be provided')
-        
-        return values
+        return self
 
 
 class ScreenRequest(BaseModel):
@@ -158,16 +142,12 @@ class ScreenRequest(BaseModel):
     timestamp: Optional[datetime] = Field(None, description="Event timestamp")
     context: Optional[Dict[str, Any]] = Field(None, description="Additional context data")
     
-    @root_validator
-    def validate_user_identification(cls, values):
+    @model_validator(mode='after')
+    def validate_user_identification(self):
         """Ensure either userId or anonymousId is provided."""
-        user_id = values.get('userId')
-        anonymous_id = values.get('anonymousId')
-        
-        if not user_id and not anonymous_id:
+        if not self.userId and not self.anonymousId:
             raise ValueError('Either userId or anonymousId must be provided')
-        
-        return values
+        return self
 
 
 class DeviceRequest(BaseModel):
