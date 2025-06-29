@@ -269,3 +269,99 @@ class CustomerIOClient:
         """
         data = {"userId": user_id}
         return self.make_request("DELETE", "/identify", data)
+    
+    def page(self, user_id: Optional[str] = None, anonymous_id: Optional[str] = None, 
+             name: Optional[str] = None, properties: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Track a page view.
+        
+        Parameters
+        ----------
+        user_id : str, optional
+            Unique identifier for the user
+        anonymous_id : str, optional
+            Anonymous identifier for the user
+        name : str, optional
+            Name of the page viewed
+        properties : dict, optional
+            Page properties
+            
+        Returns
+        -------
+        dict
+            API response
+        """
+        data = {}
+        
+        if user_id:
+            data["userId"] = user_id
+        elif anonymous_id:
+            data["anonymousId"] = anonymous_id
+        else:
+            raise ValidationError("Either user_id or anonymous_id must be provided")
+        
+        if name:
+            data["name"] = name
+        if properties:
+            data["properties"] = properties
+        
+        return self.make_request("POST", "/page", data)
+    
+    def screen(self, user_id: Optional[str] = None, anonymous_id: Optional[str] = None,
+               name: Optional[str] = None, properties: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Track a screen view.
+        
+        Parameters
+        ----------
+        user_id : str, optional
+            Unique identifier for the user
+        anonymous_id : str, optional
+            Anonymous identifier for the user
+        name : str, optional
+            Name of the screen viewed
+        properties : dict, optional
+            Screen properties
+            
+        Returns
+        -------
+        dict
+            API response
+        """
+        data = {}
+        
+        if user_id:
+            data["userId"] = user_id
+        elif anonymous_id:
+            data["anonymousId"] = anonymous_id
+        else:
+            raise ValidationError("Either user_id or anonymous_id must be provided")
+        
+        if name:
+            data["name"] = name
+        if properties:
+            data["properties"] = properties
+        
+        return self.make_request("POST", "/screen", data)
+    
+    def alias(self, user_id: str, previous_id: str) -> Dict[str, Any]:
+        """
+        Create an alias linking a user ID to a previous ID.
+        
+        Parameters
+        ----------
+        user_id : str
+            New/primary user identifier
+        previous_id : str
+            Previous/secondary user identifier to alias
+            
+        Returns
+        -------
+        dict
+            API response
+        """
+        data = {
+            "userId": user_id,
+            "previousId": previous_id
+        }
+        return self.make_request("POST", "/alias", data)

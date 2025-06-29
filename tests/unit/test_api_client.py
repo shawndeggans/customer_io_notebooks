@@ -320,3 +320,117 @@ class TestAPIClientHighLevelMethods:
             {"userId": "user123"}
         )
         assert result == {"status": "success"}
+    
+    @patch.object(CustomerIOClient, 'make_request')
+    def test_page_with_user_id(self, mock_make_request, client):
+        """Test page tracking with user ID."""
+        mock_make_request.return_value = {"status": "success"}
+        
+        result = client.page(
+            user_id="user123",
+            name="Home Page",
+            properties={"url": "https://example.com"}
+        )
+        
+        mock_make_request.assert_called_once_with(
+            "POST",
+            "/page",
+            {
+                "userId": "user123",
+                "name": "Home Page",
+                "properties": {"url": "https://example.com"}
+            }
+        )
+        assert result == {"status": "success"}
+    
+    @patch.object(CustomerIOClient, 'make_request')
+    def test_page_with_anonymous_id(self, mock_make_request, client):
+        """Test page tracking with anonymous ID."""
+        mock_make_request.return_value = {"status": "success"}
+        
+        result = client.page(
+            anonymous_id="anon_456",
+            name="Product Page"
+        )
+        
+        mock_make_request.assert_called_once_with(
+            "POST",
+            "/page",
+            {
+                "anonymousId": "anon_456",
+                "name": "Product Page"
+            }
+        )
+        assert result == {"status": "success"}
+    
+    def test_page_no_user_identification(self, client):
+        """Test page tracking without user identification."""
+        with pytest.raises(ValidationError, match="Either user_id or anonymous_id must be provided"):
+            client.page(name="Test Page")
+    
+    @patch.object(CustomerIOClient, 'make_request')
+    def test_screen_with_user_id(self, mock_make_request, client):
+        """Test screen tracking with user ID."""
+        mock_make_request.return_value = {"status": "success"}
+        
+        result = client.screen(
+            user_id="user123",
+            name="Settings Screen",
+            properties={"section": "notifications"}
+        )
+        
+        mock_make_request.assert_called_once_with(
+            "POST",
+            "/screen",
+            {
+                "userId": "user123",
+                "name": "Settings Screen",
+                "properties": {"section": "notifications"}
+            }
+        )
+        assert result == {"status": "success"}
+    
+    @patch.object(CustomerIOClient, 'make_request')
+    def test_screen_with_anonymous_id(self, mock_make_request, client):
+        """Test screen tracking with anonymous ID."""
+        mock_make_request.return_value = {"status": "success"}
+        
+        result = client.screen(
+            anonymous_id="anon_789",
+            name="Onboarding Screen"
+        )
+        
+        mock_make_request.assert_called_once_with(
+            "POST",
+            "/screen",
+            {
+                "anonymousId": "anon_789",
+                "name": "Onboarding Screen"
+            }
+        )
+        assert result == {"status": "success"}
+    
+    def test_screen_no_user_identification(self, client):
+        """Test screen tracking without user identification."""
+        with pytest.raises(ValidationError, match="Either user_id or anonymous_id must be provided"):
+            client.screen(name="Test Screen")
+    
+    @patch.object(CustomerIOClient, 'make_request')
+    def test_alias_success(self, mock_make_request, client):
+        """Test alias creation."""
+        mock_make_request.return_value = {"status": "success"}
+        
+        result = client.alias(
+            user_id="user123",
+            previous_id="temp_456"
+        )
+        
+        mock_make_request.assert_called_once_with(
+            "POST",
+            "/alias",
+            {
+                "userId": "user123",
+                "previousId": "temp_456"
+            }
+        )
+        assert result == {"status": "success"}
