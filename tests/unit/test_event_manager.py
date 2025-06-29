@@ -1,571 +1,541 @@
 """
-Comprehensive tests for Customer.IO Event Manager.
-
-Tests cover:
-- Event template registration and management
-- Standard event creation and validation
-- Ecommerce event creation with semantic schemas
-- Session-based event tracking
-- Batch event processing with optimization
-- Event context enrichment
-- Error handling and fallback mechanisms
-- Metrics and monitoring
+Unit tests for Customer.IO event tracking functions.
 """
 
-import pytest
-from datetime import datetime, timezone, timedelta
 from unittest.mock import Mock, patch
-from pydantic import ValidationError
+import pytest
+from datetime import datetime, timezone
 
 from utils.event_manager import (
-    EventCategory,
-    EventPriority,
-    EventTemplate,
-    EventSession,
-    EventManager
+    track_event,
+    track_page_view,
+    track_screen_view,
+    track_ecommerce_event,
+    track_email_event,
+    track_mobile_event,
+    track_video_event
 )
-from utils.validators import ProductViewedProperties, OrderCompletedProperties
-from utils.error_handlers import CustomerIOError
+from utils.exceptions import ValidationError, CustomerIOError
+from utils.api_client import CustomerIOClient
 
 
-class TestEventCategory:
-    """Test EventCategory enum."""
-    
-    def test_event_category_values(self):
-        """Test all event category values."""
-        assert EventCategory.NAVIGATION == "navigation"
-        assert EventCategory.ECOMMERCE == "ecommerce"
-        assert EventCategory.ENGAGEMENT == "engagement"
-        assert EventCategory.LIFECYCLE == "lifecycle"
-        assert EventCategory.FEATURE_USAGE == "feature_usage"
-        assert EventCategory.CUSTOM == "custom"
-    
-    def test_event_category_membership(self):
-        """Test event category membership."""
-        valid_categories = [cat.value for cat in EventCategory]
-        assert "navigation" in valid_categories
-        assert "invalid_category" not in valid_categories
-
-
-class TestEventPriority:
-    """Test EventPriority enum."""
-    
-    def test_event_priority_values(self):
-        """Test all event priority values."""
-        assert EventPriority.LOW == "low"
-        assert EventPriority.NORMAL == "normal"
-        assert EventPriority.HIGH == "high"
-        assert EventPriority.CRITICAL == "critical"
-    
-    def test_event_priority_membership(self):
-        """Test event priority membership."""
-        valid_priorities = [priority.value for priority in EventPriority]
-        assert "normal" in valid_priorities
-        assert "invalid_priority" not in valid_priorities
-
-
-class TestEventTemplate:
-    """Test EventTemplate data model."""
-    
-    def test_valid_event_template(self):
-        """Test valid event template creation."""
-        template = EventTemplate(
-            name="Test Event",
-            category=EventCategory.CUSTOM,
-            priority=EventPriority.HIGH,
-            required_properties=["prop1", "prop2"],
-            default_properties={"default_prop": "value"}
-        )
-        
-        assert template.name == "Test Event"
-        assert template.category == "custom"  # Should be converted to string
-        assert template.priority == "high"
-        assert template.required_properties == ["prop1", "prop2"]
-        assert template.default_properties == {"default_prop": "value"}
-    
-    def test_required_name_field(self):
-        """Test that name field is required."""
-        with pytest.raises(ValidationError, match="field required"):
-            EventTemplate(category=EventCategory.CUSTOM)
-    
-    def test_required_category_field(self):
-        """Test that category field is required."""
-        with pytest.raises(ValidationError, match="field required"):
-            EventTemplate(name="Test Event")
-    
-    def test_default_priority(self):
-        """Test that priority defaults to NORMAL."""
-        template = EventTemplate(
-            name="Test Event",
-            category=EventCategory.CUSTOM
-        )
-        
-        assert template.priority == "normal"
-    
-    def test_default_empty_lists(self):
-        """Test that lists default to empty."""
-        template = EventTemplate(
-            name="Test Event",
-            category=EventCategory.CUSTOM
-        )
-        
-        assert template.required_properties == []
-        assert template.default_properties == {}
-    
-    def test_enum_value_conversion(self):
-        """Test that enum values are converted to strings."""
-        template = EventTemplate(
-            name="Test Event",
-            category=EventCategory.ECOMMERCE,
-            priority=EventPriority.CRITICAL
-        )
-        
-        assert isinstance(template.category, str)
-        assert isinstance(template.priority, str)
-        assert template.category == "ecommerce"
-        assert template.priority == "critical"
-
-
-class TestEventSession:
-    """Test EventSession data model."""
-    
-    def test_valid_event_session(self):
-        """Test valid event session creation."""
-        now = datetime.now(timezone.utc)
-        session = EventSession(
-            session_id="session_123",
-            user_id="user_456",
-            platform="web",
-            started_at=now,
-            last_activity=now,
-            events_count=5
-        )
-        
-        assert session.session_id == "session_123"
-        assert session.user_id == "user_456"
-        assert session.platform == "web"
-        assert session.started_at == now
-        assert session.last_activity == now
-        assert session.events_count == 5
-    
-    def test_required_fields(self):
-        """Test that required fields are validated."""
-        with pytest.raises(ValidationError, match="field required"):
-            EventSession()
-    
-    def test_session_id_validation_empty(self):
-        """Test session ID validation with empty string."""
-        now = datetime.now(timezone.utc)
-        
-        with pytest.raises(ValidationError, match="Session ID cannot be empty"):
-            EventSession(
-                session_id="",
-                user_id="user_456",
-                platform="web",
-                started_at=now,
-                last_activity=now
-            )
-    
-    def test_session_id_normalization(self):
-        """Test session ID whitespace normalization."""
-        now = datetime.now(timezone.utc)
-        session = EventSession(
-            session_id="  session_123  ",
-            user_id="user_456",
-            platform="web",
-            started_at=now,
-            last_activity=now
-        )
-        
-        assert session.session_id == "session_123"
-    
-    def test_default_events_count(self):
-        """Test that events_count defaults to 0."""
-        now = datetime.now(timezone.utc)
-        session = EventSession(
-            session_id="session_123",
-            user_id="user_456",
-            platform="web",
-            started_at=now,
-            last_activity=now
-        )
-        
-        assert session.events_count == 0
-
-
-class TestEventManager:
-    """Test EventManager class."""
+class TestTrackEvent:
+    """Test custom event tracking functionality."""
     
     @pytest.fixture
     def mock_client(self):
-        """Create mock CustomerIOClient."""
-        return Mock()
+        """Create a mock Customer.IO client."""
+        client = Mock(spec=CustomerIOClient)
+        client.make_request.return_value = {"status": "success"}
+        return client
     
-    @pytest.fixture
-    def event_manager(self, mock_client):
-        """Create EventManager with mock client."""
-        return EventManager(mock_client)
-    
-    def test_event_manager_initialization(self, mock_client):
-        """Test EventManager initialization."""
-        manager = EventManager(mock_client)
-        
-        assert manager.client == mock_client
-        assert manager.logger is not None
-        assert len(manager.templates) > 0  # Should have default templates
-    
-    def test_default_templates_registered(self, event_manager):
-        """Test that default templates are registered."""
-        expected_templates = [
-            "page_viewed", "screen_viewed", "product_viewed", 
-            "order_completed", "feature_used", "content_engaged"
-        ]
-        
-        for template_name in expected_templates:
-            assert template_name in event_manager.templates
-    
-    def test_register_custom_template(self, event_manager):
-        """Test registering a custom event template."""
-        custom_template = EventTemplate(
-            name="Custom Event",
-            category=EventCategory.CUSTOM,
-            priority=EventPriority.HIGH,
-            required_properties=["custom_prop"],
-            default_properties={"default": "value"}
+    def test_track_event_success(self, mock_client):
+        """Test successful event tracking."""
+        result = track_event(
+            client=mock_client,
+            user_id="user123",
+            event_name="product_viewed",
+            properties={"product_id": "prod_456", "category": "electronics"}
         )
         
-        event_manager.register_template(custom_template)
-        
-        assert "custom_event" in event_manager.templates
-        template = event_manager.templates["custom_event"]
-        assert template.name == "Custom Event"
-        assert template.category == "custom"
-        assert template.priority == "high"
-    
-    def test_create_event_with_template(self, event_manager):
-        """Test creating an event using a template."""
-        event = event_manager.create_event(
-            user_id="user_123",
-            template_name="page_viewed",
-            properties={
-                "page_name": "Home",
-                "url": "https://example.com",
-                "load_time": 1.5
+        mock_client.make_request.assert_called_once_with(
+            "POST",
+            "/track",
+            {
+                "userId": "user123",
+                "event": "product_viewed",
+                "properties": {"product_id": "prod_456", "category": "electronics"}
             }
         )
-        
-        assert event["userId"] == "user_123"
-        assert event["event"] == "Page Viewed"
-        assert event["properties"]["page_name"] == "Home"
-        assert event["properties"]["url"] == "https://example.com"
-        assert event["properties"]["platform"] == "web"  # Default property
-        assert "timestamp" in event
-    
-    def test_create_event_missing_template(self, event_manager):
-        """Test creating event with non-existent template."""
-        with pytest.raises(ValueError, match="Event template 'nonexistent' not found"):
-            event_manager.create_event(
-                user_id="user_123",
-                template_name="nonexistent",
-                properties={}
-            )
-    
-    def test_create_event_missing_required_properties(self, event_manager):
-        """Test creating event with missing required properties."""
-        with pytest.raises(ValueError, match="Missing required properties"):
-            event_manager.create_event(
-                user_id="user_123",
-                template_name="page_viewed",
-                properties={"page_name": "Home"}  # Missing 'url'
-            )
-    
-    def test_create_event_with_context(self, event_manager):
-        """Test creating event with context."""
-        context = {"ip": "192.168.1.1", "user_agent": "Mozilla/5.0"}
-        
-        event = event_manager.create_event(
-            user_id="user_123",
-            template_name="page_viewed",
-            properties={"page_name": "Home", "url": "https://example.com"},
-            context=context
-        )
-        
-        assert event["context"] == context
-    
-    def test_create_event_custom_timestamp(self, event_manager):
-        """Test creating event with custom timestamp."""
-        custom_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
-        
-        event = event_manager.create_event(
-            user_id="user_123",
-            template_name="page_viewed",
-            properties={"page_name": "Home", "url": "https://example.com"},
-            timestamp=custom_time
-        )
-        
-        assert event["timestamp"] == custom_time
-    
-    @patch('utils.event_manager.validate_request_size', return_value=True)
-    def test_send_event_success(self, mock_validate, event_manager):
-        """Test successful event sending."""
-        event_data = {
-            "userId": "user_123",
-            "event": "Test Event",
-            "properties": {"test": "value"},
-            "timestamp": datetime.now(timezone.utc)
-        }
-        
-        event_manager.client.track.return_value = {"status": "success"}
-        
-        result = event_manager.send_event(event_data)
-        
         assert result == {"status": "success"}
-        event_manager.client.track.assert_called_once()
     
-    @patch('utils.event_manager.validate_request_size', return_value=False)
-    def test_send_event_size_validation_failure(self, mock_validate, event_manager):
-        """Test event sending with size validation failure."""
-        event_data = {
-            "userId": "user_123",
-            "event": "Large Event",
-            "properties": {"large_data": "x" * 50000},
-            "timestamp": datetime.now(timezone.utc)
-        }
+    def test_track_event_minimal_params(self, mock_client):
+        """Test event tracking with minimal parameters."""
+        result = track_event(
+            client=mock_client,
+            user_id="user123",
+            event_name="button_clicked"
+        )
         
-        with pytest.raises(ValueError, match="Event size exceeds 32KB limit"):
-            event_manager.send_event(event_data)
+        mock_client.make_request.assert_called_once_with(
+            "POST",
+            "/track",
+            {
+                "userId": "user123",
+                "event": "button_clicked"
+            }
+        )
+        assert result == {"status": "success"}
     
-    def test_send_event_api_error(self, event_manager):
-        """Test event sending with API error."""
-        event_data = {
-            "userId": "user_123",
-            "event": "Test Event",
-            "properties": {"test": "value"},
-            "timestamp": datetime.now(timezone.utc)
-        }
+    def test_track_event_with_timestamp(self, mock_client):
+        """Test event tracking with timestamp."""
+        timestamp = datetime(2024, 1, 15, 12, 30, 0, tzinfo=timezone.utc)
         
-        event_manager.client.track.side_effect = CustomerIOError("API error")
+        result = track_event(
+            client=mock_client,
+            user_id="user123",
+            event_name="purchase_completed",
+            properties={"amount": 99.99},
+            timestamp=timestamp
+        )
+        
+        mock_client.make_request.assert_called_once_with(
+            "POST",
+            "/track",
+            {
+                "userId": "user123",
+                "event": "purchase_completed",
+                "properties": {"amount": 99.99},
+                "timestamp": "2024-01-15T12:30:00+00:00"
+            }
+        )
+        assert result == {"status": "success"}
+    
+    def test_track_event_invalid_user_id(self, mock_client):
+        """Test event tracking with invalid user ID."""
+        with pytest.raises(ValidationError, match="User ID must be a non-empty string"):
+            track_event(
+                client=mock_client,
+                user_id="",
+                event_name="test_event"
+            )
+    
+    def test_track_event_invalid_event_name(self, mock_client):
+        """Test event tracking with invalid event name."""
+        with pytest.raises(ValidationError, match="Event name must be a non-empty string"):
+            track_event(
+                client=mock_client,
+                user_id="user123",
+                event_name=""
+            )
+    
+    def test_track_event_long_event_name(self, mock_client):
+        """Test event tracking with event name that's too long."""
+        long_event_name = "x" * 151
+        
+        with pytest.raises(ValidationError, match="Event name must be 150 characters or less"):
+            track_event(
+                client=mock_client,
+                user_id="user123",
+                event_name=long_event_name
+            )
+    
+    def test_track_event_invalid_properties(self, mock_client):
+        """Test event tracking with invalid properties."""
+        with pytest.raises(ValidationError, match="Properties must be a dictionary"):
+            track_event(
+                client=mock_client,
+                user_id="user123",
+                event_name="test_event",
+                properties="invalid"
+            )
+    
+    def test_track_event_api_error(self, mock_client):
+        """Test event tracking when API returns error."""
+        mock_client.make_request.side_effect = CustomerIOError("API error")
         
         with pytest.raises(CustomerIOError, match="API error"):
-            event_manager.send_event(event_data)
+            track_event(
+                client=mock_client,
+                user_id="user123",
+                event_name="test_event"
+            )
+
+
+class TestTrackPageView:
+    """Test page view tracking functionality."""
     
-    def test_send_events_batch_success(self, event_manager):
-        """Test successful batch event sending."""
-        events = [
+    @pytest.fixture
+    def mock_client(self):
+        """Create a mock Customer.IO client."""
+        client = Mock(spec=CustomerIOClient)
+        client.make_request.return_value = {"status": "success"}
+        return client
+    
+    def test_track_page_view_success(self, mock_client):
+        """Test successful page view tracking."""
+        result = track_page_view(
+            client=mock_client,
+            user_id="user123",
+            page_name="Home Page",
+            properties={"url": "https://example.com", "referrer": "google.com"}
+        )
+        
+        mock_client.make_request.assert_called_once_with(
+            "POST",
+            "/page",
             {
-                "userId": "user_123",
-                "event": "Event 1",
-                "properties": {"test": "value1"},
-                "timestamp": datetime.now(timezone.utc)
-            },
-            {
-                "userId": "user_123",
-                "event": "Event 2",
-                "properties": {"test": "value2"},
-                "timestamp": datetime.now(timezone.utc)
+                "userId": "user123",
+                "name": "Home Page",
+                "properties": {"url": "https://example.com", "referrer": "google.com"}
             }
-        ]
-        
-        event_manager.client.batch.return_value = {"status": "success"}
-        
-        results = event_manager.send_events_batch(events)
-        
-        assert len(results) == 1  # Should be one batch
-        assert results[0]["status"] == "success"
-        assert results[0]["count"] == 2
-        event_manager.client.batch.assert_called_once()
+        )
+        assert result == {"status": "success"}
     
-    def test_send_events_batch_partial_failure(self, event_manager):
-        """Test batch sending with partial failures."""
-        events = [
+    def test_track_page_view_minimal_params(self, mock_client):
+        """Test page view tracking with minimal parameters."""
+        result = track_page_view(
+            client=mock_client,
+            user_id="user123"
+        )
+        
+        mock_client.make_request.assert_called_once_with(
+            "POST",
+            "/page",
+            {"userId": "user123"}
+        )
+        assert result == {"status": "success"}
+    
+    def test_track_page_view_invalid_user_id(self, mock_client):
+        """Test page view tracking with invalid user ID."""
+        with pytest.raises(ValidationError, match="User ID must be a non-empty string"):
+            track_page_view(
+                client=mock_client,
+                user_id=""
+            )
+
+
+class TestTrackScreenView:
+    """Test mobile screen view tracking functionality."""
+    
+    @pytest.fixture
+    def mock_client(self):
+        """Create a mock Customer.IO client."""
+        client = Mock(spec=CustomerIOClient)
+        client.make_request.return_value = {"status": "success"}
+        return client
+    
+    def test_track_screen_view_success(self, mock_client):
+        """Test successful screen view tracking."""
+        result = track_screen_view(
+            client=mock_client,
+            user_id="user123",
+            screen_name="Product Details",
+            properties={"product_id": "prod_456", "screen_class": "ProductViewController"}
+        )
+        
+        mock_client.make_request.assert_called_once_with(
+            "POST",
+            "/screen",
             {
-                "userId": "user_123",
-                "event": "Event 1",
-                "properties": {"test": "value1"},
-                "timestamp": datetime.now(timezone.utc)
-            },
-            {
-                "userId": "user_123",
-                "event": "Event 2",
-                "properties": {"test": "value2"},
-                "timestamp": datetime.now(timezone.utc)
+                "userId": "user123",
+                "name": "Product Details",
+                "properties": {"product_id": "prod_456", "screen_class": "ProductViewController"}
             }
-        ]
-        
-        # First call succeeds, second fails (would happen with multiple batches)
-        event_manager.client.batch.side_effect = [
-            {"status": "success"},
-            CustomerIOError("API error")
-        ]
-        
-        # Force multiple batches by setting small batch size
-        with patch('utils.event_manager.BatchTransformer.optimize_batch_sizes') as mock_optimize:
-            mock_optimize.return_value = [
-                [{"type": "track", "userId": "user_123", "event": "Event 1"}],
-                [{"type": "track", "userId": "user_123", "event": "Event 2"}]
-            ]
-            
-            results = event_manager.send_events_batch(events)
-        
-        assert len(results) == 2
-        assert results[0]["status"] == "success"
-        assert results[1]["status"] == "failed"
-        assert "error" in results[1]
+        )
+        assert result == {"status": "success"}
     
-    def test_create_ecommerce_event_product_viewed(self, event_manager):
-        """Test creating product viewed ecommerce event."""
-        product_data = {
-            "product_id": "prod_123",
-            "name": "Test Product",
-            "price": 29.99,
-            "currency": "USD"
-        }
+    def test_track_screen_view_minimal_params(self, mock_client):
+        """Test screen view tracking with minimal parameters."""
+        result = track_screen_view(
+            client=mock_client,
+            user_id="user123"
+        )
         
-        event = event_manager.create_ecommerce_event(
-            user_id="user_123",
+        mock_client.make_request.assert_called_once_with(
+            "POST",
+            "/screen",
+            {"userId": "user123"}
+        )
+        assert result == {"status": "success"}
+
+
+class TestTrackEcommerceEvent:
+    """Test ecommerce event tracking functionality."""
+    
+    @pytest.fixture
+    def mock_client(self):
+        """Create a mock Customer.IO client."""
+        client = Mock(spec=CustomerIOClient)
+        client.make_request.return_value = {"status": "success"}
+        return client
+    
+    def test_track_product_viewed(self, mock_client):
+        """Test product viewed event tracking."""
+        result = track_ecommerce_event(
+            client=mock_client,
+            user_id="user123",
             event_type="product_viewed",
-            product_data=product_data,
-            category="electronics"
-        )
-        
-        assert event["event"] == "Product Viewed"
-        assert event["properties"]["product_id"] == "prod_123"
-        assert event["properties"]["price"] == 29.99
-        assert event["properties"]["category"] == "electronics"
-    
-    def test_create_ecommerce_event_order_completed(self, event_manager):
-        """Test creating order completed ecommerce event."""
-        order_data = {
-            "order_id": "order_456",
-            "total": 59.99,
-            "currency": "USD",
-            "products": [{"product_id": "prod_123", "quantity": 2}]
-        }
-        
-        event = event_manager.create_ecommerce_event(
-            user_id="user_123",
-            event_type="order_completed",
-            product_data=order_data,
-            payment_method="credit_card"
-        )
-        
-        assert event["event"] == "Order Completed"
-        assert event["properties"]["order_id"] == "order_456"
-        assert event["properties"]["total"] == 59.99
-        assert event["properties"]["payment_method"] == "credit_card"
-    
-    def test_create_session_events(self, event_manager):
-        """Test creating session-based events."""
-        session = EventSession(
-            session_id="session_123",
-            user_id="user_456",
-            platform="web",
-            started_at=datetime.now(timezone.utc),
-            last_activity=datetime.now(timezone.utc)
-        )
-        
-        events_data = [
-            {
-                "template_name": "page_viewed",
-                "properties": {"page_name": "Home", "url": "/"},
-                "time_offset_seconds": 0
-            },
-            {
-                "template_name": "page_viewed",
-                "properties": {"page_name": "Products", "url": "/products"},
-                "time_offset_seconds": 30
+            data={
+                "product_id": "prod_456",
+                "product_name": "Wireless Headphones",
+                "price": 99.99,
+                "currency": "USD"
             }
+        )
+        
+        mock_client.make_request.assert_called_once_with(
+            "POST",
+            "/track",
+            {
+                "userId": "user123",
+                "event": "Product Viewed",
+                "properties": {
+                    "product_id": "prod_456",
+                    "product_name": "Wireless Headphones",
+                    "price": 99.99,
+                    "currency": "USD"
+                }
+            }
+        )
+        assert result == {"status": "success"}
+    
+    def test_track_order_completed(self, mock_client):
+        """Test order completed event tracking."""
+        result = track_ecommerce_event(
+            client=mock_client,
+            user_id="user123",
+            event_type="order_completed",
+            data={
+                "order_id": "order_789",
+                "total": 149.98,
+                "currency": "USD",
+                "products": [
+                    {"product_id": "prod_1", "price": 75.00},
+                    {"product_id": "prod_2", "price": 74.98}
+                ]
+            }
+        )
+        
+        mock_client.make_request.assert_called_once_with(
+            "POST",
+            "/track",
+            {
+                "userId": "user123",
+                "event": "Order Completed",
+                "properties": {
+                    "order_id": "order_789",
+                    "total": 149.98,
+                    "currency": "USD",
+                    "products": [
+                        {"product_id": "prod_1", "price": 75.00},
+                        {"product_id": "prod_2", "price": 74.98}
+                    ]
+                }
+            }
+        )
+        assert result == {"status": "success"}
+    
+    def test_track_ecommerce_invalid_event_type(self, mock_client):
+        """Test ecommerce event tracking with invalid event type."""
+        with pytest.raises(ValidationError, match="Invalid ecommerce event type"):
+            track_ecommerce_event(
+                client=mock_client,
+                user_id="user123",
+                event_type="invalid_event",
+                data={}
+            )
+
+
+class TestTrackEmailEvent:
+    """Test email event tracking functionality."""
+    
+    @pytest.fixture
+    def mock_client(self):
+        """Create a mock Customer.IO client."""
+        client = Mock(spec=CustomerIOClient)
+        client.make_request.return_value = {"status": "success"}
+        return client
+    
+    def test_track_email_opened(self, mock_client):
+        """Test email opened event tracking."""
+        result = track_email_event(
+            client=mock_client,
+            user_id="user123",
+            event_type="email_opened",
+            data={
+                "email_id": "email_456",
+                "campaign_id": "campaign_789",
+                "subject": "Welcome to our service!"
+            }
+        )
+        
+        mock_client.make_request.assert_called_once_with(
+            "POST",
+            "/track",
+            {
+                "userId": "user123",
+                "event": "Email Opened",
+                "properties": {
+                    "email_id": "email_456",
+                    "campaign_id": "campaign_789",
+                    "subject": "Welcome to our service!"
+                }
+            }
+        )
+        assert result == {"status": "success"}
+    
+    def test_track_email_invalid_event_type(self, mock_client):
+        """Test email event tracking with invalid event type."""
+        with pytest.raises(ValidationError, match="Invalid email event type"):
+            track_email_event(
+                client=mock_client,
+                user_id="user123",
+                event_type="invalid_event",
+                data={}
+            )
+
+
+class TestTrackMobileEvent:
+    """Test mobile event tracking functionality."""
+    
+    @pytest.fixture
+    def mock_client(self):
+        """Create a mock Customer.IO client."""
+        client = Mock(spec=CustomerIOClient)
+        client.make_request.return_value = {"status": "success"}
+        return client
+    
+    def test_track_push_notification_received(self, mock_client):
+        """Test push notification received event tracking."""
+        result = track_mobile_event(
+            client=mock_client,
+            user_id="user123",
+            event_type="push_notification_received",
+            data={
+                "notification_id": "notif_456",
+                "campaign_id": "campaign_789",
+                "message": "New message waiting for you!"
+            }
+        )
+        
+        mock_client.make_request.assert_called_once_with(
+            "POST",
+            "/track",
+            {
+                "userId": "user123",
+                "event": "Push Notification Received",
+                "properties": {
+                    "notification_id": "notif_456",
+                    "campaign_id": "campaign_789",
+                    "message": "New message waiting for you!"
+                }
+            }
+        )
+        assert result == {"status": "success"}
+
+
+class TestTrackVideoEvent:
+    """Test video event tracking functionality."""
+    
+    @pytest.fixture
+    def mock_client(self):
+        """Create a mock Customer.IO client."""
+        client = Mock(spec=CustomerIOClient)
+        client.make_request.return_value = {"status": "success"}
+        return client
+    
+    def test_track_video_started(self, mock_client):
+        """Test video started event tracking."""
+        result = track_video_event(
+            client=mock_client,
+            user_id="user123",
+            event_type="video_started",
+            data={
+                "video_id": "video_456",
+                "video_title": "Product Demo",
+                "duration": 120,
+                "quality": "HD"
+            }
+        )
+        
+        mock_client.make_request.assert_called_once_with(
+            "POST",
+            "/track",
+            {
+                "userId": "user123",
+                "event": "Video Started",
+                "properties": {
+                    "video_id": "video_456",
+                    "video_title": "Product Demo",
+                    "duration": 120,
+                    "quality": "HD"
+                }
+            }
+        )
+        assert result == {"status": "success"}
+
+
+class TestEventManagerIntegration:
+    """Test integration scenarios for event tracking."""
+    
+    @pytest.fixture
+    def mock_client(self):
+        """Create a mock Customer.IO client."""
+        client = Mock(spec=CustomerIOClient)
+        client.make_request.return_value = {"status": "success"}
+        return client
+    
+    def test_user_journey_tracking(self, mock_client):
+        """Test complete user journey event tracking."""
+        user_id = "user123"
+        
+        # Track page view
+        page_result = track_page_view(
+            client=mock_client,
+            user_id=user_id,
+            page_name="Home Page",
+            properties={"url": "https://example.com"}
+        )
+        assert page_result == {"status": "success"}
+        
+        # Track product view
+        product_result = track_ecommerce_event(
+            client=mock_client,
+            user_id=user_id,
+            event_type="product_viewed",
+            data={"product_id": "prod_456", "price": 99.99}
+        )
+        assert product_result == {"status": "success"}
+        
+        # Track custom event
+        custom_result = track_event(
+            client=mock_client,
+            user_id=user_id,
+            event_name="add_to_cart",
+            properties={"product_id": "prod_456", "quantity": 1}
+        )
+        assert custom_result == {"status": "success"}
+        
+        # Track order completion
+        order_result = track_ecommerce_event(
+            client=mock_client,
+            user_id=user_id,
+            event_type="order_completed",
+            data={"order_id": "order_789", "total": 99.99}
+        )
+        assert order_result == {"status": "success"}
+        
+        # Verify all calls were made
+        assert mock_client.make_request.call_count == 4
+    
+    def test_batch_event_tracking(self, mock_client):
+        """Test tracking multiple events for different users."""
+        events = [
+            {"user_id": "user1", "event": "signup", "properties": {"source": "web"}},
+            {"user_id": "user2", "event": "login", "properties": {"method": "google"}},
+            {"user_id": "user3", "event": "purchase", "properties": {"amount": 50.00}}
         ]
         
-        # Register session_started template for test
-        session_template = EventTemplate(
-            name="Session Started",
-            category=EventCategory.LIFECYCLE,
-            required_properties=["session_id", "platform"],
-            default_properties={}
-        )
-        event_manager.register_template(session_template)
-        
-        session_events = event_manager.create_session_events(session, events_data)
-        
-        assert len(session_events) == 3  # session_start + 2 page views
-        assert session_events[0]["event"] == "Session Started"
-        assert all("session_id" in event["properties"] for event in session_events)
-        assert session.events_count == 3
-    
-    def test_create_enriched_event_web(self, event_manager):
-        """Test creating enriched web event."""
-        with patch('utils.event_manager.ContextTransformer.create_web_context') as mock_context:
-            mock_context.return_value = {"platform": "web", "ip": "192.168.1.1"}
-            
-            event = event_manager.create_enriched_event(
-                user_id="user_123",
-                template_name="page_viewed",
-                properties={"page_name": "Home", "url": "https://example.com"},
-                platform="web",
-                ip="192.168.1.1"
+        # Track all events
+        for event in events:
+            result = track_event(
+                client=mock_client,
+                user_id=event["user_id"],
+                event_name=event["event"],
+                properties=event["properties"]
             )
-            
-            assert "context" in event
-            assert event["context"]["platform"] == "web"
-            mock_context.assert_called_once()
-    
-    def test_create_enriched_event_mobile(self, event_manager):
-        """Test creating enriched mobile event."""
-        with patch('utils.event_manager.ContextTransformer.create_mobile_context') as mock_context:
-            mock_context.return_value = {"platform": "mobile", "app_version": "1.0.0"}
-            
-            event = event_manager.create_enriched_event(
-                user_id="user_123",
-                template_name="screen_viewed",
-                properties={"screen_name": "Home"},
-                platform="mobile",
-                app_version="1.0.0"
-            )
-            
-            assert "context" in event
-            assert event["context"]["platform"] == "mobile"
-            mock_context.assert_called_once()
-    
-    def test_send_event_with_fallback_success(self, event_manager):
-        """Test event sending with fallback - success case."""
-        event_data = {
-            "userId": "user_123",
-            "event": "Test Event",
-            "properties": {"test": "value"},
-            "timestamp": datetime.now(timezone.utc)
-        }
+            assert result == {"status": "success"}
         
-        event_manager.client.track.return_value = {"status": "success"}
+        # Verify all calls were made
+        assert mock_client.make_request.call_count == 3
         
-        result = event_manager.send_event_with_fallback(event_data)
-        
-        assert result["status"] == "success"
-    
-    def test_send_event_with_fallback_failure(self, event_manager):
-        """Test event sending with fallback - failure case."""
-        event_data = {
-            "userId": "user_123",
-            "event": "Test Event",
-            "properties": {"test": "value"},
-            "timestamp": datetime.now(timezone.utc)
-        }
-        
-        event_manager.client.track.side_effect = CustomerIOError("API error")
-        
-        result = event_manager.send_event_with_fallback(event_data)
-        
-        assert result["status"] == "fallback_saved"
-        assert "message" in result
-    
-    def test_get_metrics(self, event_manager):
-        """Test getting event manager metrics."""
-        metrics = event_manager.get_metrics()
-        
-        assert "templates" in metrics
-        assert "client" in metrics
-        assert metrics["templates"]["registered_count"] > 0
-        assert len(metrics["templates"]["template_names"]) > 0
-        assert "rate_limit" in metrics["client"]
-        assert "base_url" in metrics["client"]
-        assert "max_retries" in metrics["client"]
+        # Verify call details
+        calls = mock_client.make_request.call_args_list
+        for i, call in enumerate(calls):
+            args, kwargs = call
+            assert args[0] == "POST"
+            assert args[1] == "/track"
+            assert args[2]["userId"] == events[i]["user_id"]
+            assert args[2]["event"] == events[i]["event"]
+            assert args[2]["properties"] == events[i]["properties"]

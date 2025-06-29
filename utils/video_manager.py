@@ -1,9 +1,9 @@
 """
-Customer.IO comprehensive ecommerce semantic events.
+Customer.IO comprehensive video tracking semantic events.
 
-This module provides functions for tracking all ecommerce-related semantic events
+This module provides functions for tracking all video-related semantic events
 as defined in the Customer.IO Data Pipelines API specification, including
-product discovery, checkout funnel, promotions, coupons, wishlists, and social commerce.
+playback lifecycle, content tracking, and advertisement events.
 """
 
 from datetime import datetime
@@ -14,17 +14,18 @@ from .validators import validate_user_id
 from .exceptions import ValidationError
 
 
-def track_products_searched(
+def track_video_playback_started(
     client: CustomerIOClient,
     user_id: str,
+    video_id: str,
     properties: Optional[Dict[str, Any]] = None,
     timestamp: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
-    Track a "Products Searched" semantic event.
+    Track a "Video Playback Started" semantic event.
     
-    This event indicates that a user has performed a product search,
-    providing insights into search behavior and product discovery patterns.
+    This event indicates that video playback has been initiated, providing
+    analytics on video engagement and viewer behavior patterns.
     
     Parameters
     ----------
@@ -32,10 +33,12 @@ def track_products_searched(
         Initialized Customer.IO API client
     user_id : str
         Unique identifier for the user
+    video_id : str
+        Unique identifier for the video
     properties : dict, optional
-        Additional properties (query, results_count, category, filters_applied, etc.)
+        Additional video properties (title, duration, quality, etc.)
     timestamp : datetime, optional
-        When the search was performed
+        When the playback started
         
     Returns
     -------
@@ -45,28 +48,45 @@ def track_products_searched(
     Raises
     ------
     ValidationError
-        If user_id or parameters are invalid
+        If user_id, video_id, or parameters are invalid
     CustomerIOError
         If API request fails
+        
+    Example
+    -------
+    >>> client = CustomerIOClient(api_key="your_key")
+    >>> result = track_video_playback_started(
+    ...     client, 
+    ...     user_id="user123",
+    ...     video_id="video_456",
+    ...     properties={"title": "Introduction", "duration": 300}
+    ... )
+    >>> print(result["status"])
+    success
     """
     # Validate inputs
     if not user_id or not isinstance(user_id, str):
         raise ValidationError("User ID must be a non-empty string")
+    
+    if not video_id or not isinstance(video_id, str):
+        raise ValidationError("Video ID must be a non-empty string")
     
     validate_user_id(user_id)
     
     if properties is not None and not isinstance(properties, dict):
         raise ValidationError("Properties must be a dictionary")
     
+    # Build event properties
+    event_properties = {"video_id": video_id}
+    if properties:
+        event_properties.update(properties)
+    
     # Build request data
     data = {
         "userId": user_id,
-        "event": "Products Searched"
+        "event": "Video Playback Started",
+        "properties": event_properties
     }
-    
-    # Add properties if provided
-    if properties:
-        data["properties"] = properties
     
     # Add timestamp if provided
     if timestamp:
@@ -75,17 +95,18 @@ def track_products_searched(
     return client.make_request("POST", "/track", data)
 
 
-def track_product_list_viewed(
+def track_video_playback_paused(
     client: CustomerIOClient,
     user_id: str,
+    video_id: str,
     properties: Optional[Dict[str, Any]] = None,
     timestamp: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
-    Track a "Product List Viewed" semantic event.
+    Track a "Video Playback Paused" semantic event.
     
-    This event indicates that a user has viewed a list of products,
-    providing insights into browsing behavior and category engagement.
+    This event indicates that video playback has been paused by the user,
+    providing insights into engagement patterns and drop-off points.
     
     Parameters
     ----------
@@ -93,10 +114,12 @@ def track_product_list_viewed(
         Initialized Customer.IO API client
     user_id : str
         Unique identifier for the user
+    video_id : str
+        Unique identifier for the video
     properties : dict, optional
-        Additional properties (list_id, list_name, category, products, etc.)
+        Additional properties (position, duration, percentage_watched, etc.)
     timestamp : datetime, optional
-        When the product list was viewed
+        When the playback was paused
         
     Returns
     -------
@@ -107,20 +130,25 @@ def track_product_list_viewed(
     if not user_id or not isinstance(user_id, str):
         raise ValidationError("User ID must be a non-empty string")
     
+    if not video_id or not isinstance(video_id, str):
+        raise ValidationError("Video ID must be a non-empty string")
+    
     validate_user_id(user_id)
     
     if properties is not None and not isinstance(properties, dict):
         raise ValidationError("Properties must be a dictionary")
     
+    # Build event properties
+    event_properties = {"video_id": video_id}
+    if properties:
+        event_properties.update(properties)
+    
     # Build request data
     data = {
         "userId": user_id,
-        "event": "Product List Viewed"
+        "event": "Video Playback Paused",
+        "properties": event_properties
     }
-    
-    # Add properties if provided
-    if properties:
-        data["properties"] = properties
     
     # Add timestamp if provided
     if timestamp:
@@ -129,17 +157,18 @@ def track_product_list_viewed(
     return client.make_request("POST", "/track", data)
 
 
-def track_product_list_filtered(
+def track_video_playback_interrupted(
     client: CustomerIOClient,
     user_id: str,
+    video_id: str,
     properties: Optional[Dict[str, Any]] = None,
     timestamp: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
-    Track a "Product List Filtered" semantic event.
+    Track a "Video Playback Interrupted" semantic event.
     
-    This event indicates that a user has applied filters to a product list,
-    providing insights into product discovery preferences and intent.
+    This event indicates that video playback was interrupted due to technical
+    issues, providing insights into quality of service and user experience.
     
     Parameters
     ----------
@@ -147,10 +176,12 @@ def track_product_list_filtered(
         Initialized Customer.IO API client
     user_id : str
         Unique identifier for the user
+    video_id : str
+        Unique identifier for the video
     properties : dict, optional
-        Additional properties (list_id, filters, results_count, etc.)
+        Additional properties (interruption_reason, error_code, position, etc.)
     timestamp : datetime, optional
-        When the filters were applied
+        When the interruption occurred
         
     Returns
     -------
@@ -161,20 +192,25 @@ def track_product_list_filtered(
     if not user_id or not isinstance(user_id, str):
         raise ValidationError("User ID must be a non-empty string")
     
+    if not video_id or not isinstance(video_id, str):
+        raise ValidationError("Video ID must be a non-empty string")
+    
     validate_user_id(user_id)
     
     if properties is not None and not isinstance(properties, dict):
         raise ValidationError("Properties must be a dictionary")
     
+    # Build event properties
+    event_properties = {"video_id": video_id}
+    if properties:
+        event_properties.update(properties)
+    
     # Build request data
     data = {
         "userId": user_id,
-        "event": "Product List Filtered"
+        "event": "Video Playback Interrupted",
+        "properties": event_properties
     }
-    
-    # Add properties if provided
-    if properties:
-        data["properties"] = properties
     
     # Add timestamp if provided
     if timestamp:
@@ -183,17 +219,18 @@ def track_product_list_filtered(
     return client.make_request("POST", "/track", data)
 
 
-def track_product_clicked(
+def track_video_playback_buffer_started(
     client: CustomerIOClient,
     user_id: str,
+    video_id: str,
     properties: Optional[Dict[str, Any]] = None,
     timestamp: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
-    Track a "Product Clicked" semantic event.
+    Track a "Video Playback Buffer Started" semantic event.
     
-    This event indicates that a user has clicked on a product from a list,
-    providing insights into product interest and click-through rates.
+    This event indicates that video buffering has started, providing insights
+    into streaming quality and network performance.
     
     Parameters
     ----------
@@ -201,10 +238,12 @@ def track_product_clicked(
         Initialized Customer.IO API client
     user_id : str
         Unique identifier for the user
+    video_id : str
+        Unique identifier for the video
     properties : dict, optional
-        Additional properties (product_id, product_name, position, list_id, etc.)
+        Additional properties (position, bitrate, buffer_reason, etc.)
     timestamp : datetime, optional
-        When the product was clicked
+        When buffering started
         
     Returns
     -------
@@ -215,20 +254,25 @@ def track_product_clicked(
     if not user_id or not isinstance(user_id, str):
         raise ValidationError("User ID must be a non-empty string")
     
+    if not video_id or not isinstance(video_id, str):
+        raise ValidationError("Video ID must be a non-empty string")
+    
     validate_user_id(user_id)
     
     if properties is not None and not isinstance(properties, dict):
         raise ValidationError("Properties must be a dictionary")
     
+    # Build event properties
+    event_properties = {"video_id": video_id}
+    if properties:
+        event_properties.update(properties)
+    
     # Build request data
     data = {
         "userId": user_id,
-        "event": "Product Clicked"
+        "event": "Video Playback Buffer Started",
+        "properties": event_properties
     }
-    
-    # Add properties if provided
-    if properties:
-        data["properties"] = properties
     
     # Add timestamp if provided
     if timestamp:
@@ -237,17 +281,18 @@ def track_product_clicked(
     return client.make_request("POST", "/track", data)
 
 
-def track_checkout_step_viewed(
+def track_video_playback_buffer_completed(
     client: CustomerIOClient,
     user_id: str,
+    video_id: str,
     properties: Optional[Dict[str, Any]] = None,
     timestamp: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
-    Track a "Checkout Step Viewed" semantic event.
+    Track a "Video Playback Buffer Completed" semantic event.
     
-    This event indicates that a user has viewed a specific step in the checkout
-    process, providing insights into checkout funnel progression.
+    This event indicates that video buffering has completed and playback
+    can resume, providing insights into buffer recovery and quality adaptation.
     
     Parameters
     ----------
@@ -255,10 +300,12 @@ def track_checkout_step_viewed(
         Initialized Customer.IO API client
     user_id : str
         Unique identifier for the user
+    video_id : str
+        Unique identifier for the video
     properties : dict, optional
-        Additional properties (checkout_id, step, step_name, cart_value, etc.)
+        Additional properties (buffer_duration, new_bitrate, position, etc.)
     timestamp : datetime, optional
-        When the checkout step was viewed
+        When buffering completed
         
     Returns
     -------
@@ -269,20 +316,25 @@ def track_checkout_step_viewed(
     if not user_id or not isinstance(user_id, str):
         raise ValidationError("User ID must be a non-empty string")
     
+    if not video_id or not isinstance(video_id, str):
+        raise ValidationError("Video ID must be a non-empty string")
+    
     validate_user_id(user_id)
     
     if properties is not None and not isinstance(properties, dict):
         raise ValidationError("Properties must be a dictionary")
     
+    # Build event properties
+    event_properties = {"video_id": video_id}
+    if properties:
+        event_properties.update(properties)
+    
     # Build request data
     data = {
         "userId": user_id,
-        "event": "Checkout Step Viewed"
+        "event": "Video Playback Buffer Completed",
+        "properties": event_properties
     }
-    
-    # Add properties if provided
-    if properties:
-        data["properties"] = properties
     
     # Add timestamp if provided
     if timestamp:
@@ -291,17 +343,18 @@ def track_checkout_step_viewed(
     return client.make_request("POST", "/track", data)
 
 
-def track_checkout_step_completed(
+def track_video_playback_seek_started(
     client: CustomerIOClient,
     user_id: str,
+    video_id: str,
     properties: Optional[Dict[str, Any]] = None,
     timestamp: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
-    Track a "Checkout Step Completed" semantic event.
+    Track a "Video Playback Seek Started" semantic event.
     
-    This event indicates that a user has completed a specific step in the checkout
-    process, providing insights into checkout funnel conversion rates.
+    This event indicates that the user has initiated a seek operation,
+    providing insights into content navigation patterns.
     
     Parameters
     ----------
@@ -309,10 +362,12 @@ def track_checkout_step_completed(
         Initialized Customer.IO API client
     user_id : str
         Unique identifier for the user
+    video_id : str
+        Unique identifier for the video
     properties : dict, optional
-        Additional properties (checkout_id, step, step_name, completion_data, etc.)
+        Additional properties (position, seek_position, seek_type, etc.)
     timestamp : datetime, optional
-        When the checkout step was completed
+        When the seek operation started
         
     Returns
     -------
@@ -323,20 +378,25 @@ def track_checkout_step_completed(
     if not user_id or not isinstance(user_id, str):
         raise ValidationError("User ID must be a non-empty string")
     
+    if not video_id or not isinstance(video_id, str):
+        raise ValidationError("Video ID must be a non-empty string")
+    
     validate_user_id(user_id)
     
     if properties is not None and not isinstance(properties, dict):
         raise ValidationError("Properties must be a dictionary")
     
+    # Build event properties
+    event_properties = {"video_id": video_id}
+    if properties:
+        event_properties.update(properties)
+    
     # Build request data
     data = {
         "userId": user_id,
-        "event": "Checkout Step Completed"
+        "event": "Video Playback Seek Started",
+        "properties": event_properties
     }
-    
-    # Add properties if provided
-    if properties:
-        data["properties"] = properties
     
     # Add timestamp if provided
     if timestamp:
@@ -345,17 +405,18 @@ def track_checkout_step_completed(
     return client.make_request("POST", "/track", data)
 
 
-def track_payment_info_entered(
+def track_video_playback_seek_completed(
     client: CustomerIOClient,
     user_id: str,
+    video_id: str,
     properties: Optional[Dict[str, Any]] = None,
     timestamp: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
-    Track a "Payment Info Entered" semantic event.
+    Track a "Video Playback Seek Completed" semantic event.
     
-    This event indicates that a user has entered payment information during
-    checkout, providing insights into payment funnel conversion.
+    This event indicates that a seek operation has completed successfully,
+    providing insights into user navigation efficiency and preferences.
     
     Parameters
     ----------
@@ -363,10 +424,12 @@ def track_payment_info_entered(
         Initialized Customer.IO API client
     user_id : str
         Unique identifier for the user
+    video_id : str
+        Unique identifier for the video
     properties : dict, optional
-        Additional properties (checkout_id, payment_method, card_type, etc.)
+        Additional properties (previous_position, new_position, seek_duration, etc.)
     timestamp : datetime, optional
-        When the payment info was entered
+        When the seek operation completed
         
     Returns
     -------
@@ -377,20 +440,25 @@ def track_payment_info_entered(
     if not user_id or not isinstance(user_id, str):
         raise ValidationError("User ID must be a non-empty string")
     
+    if not video_id or not isinstance(video_id, str):
+        raise ValidationError("Video ID must be a non-empty string")
+    
     validate_user_id(user_id)
     
     if properties is not None and not isinstance(properties, dict):
         raise ValidationError("Properties must be a dictionary")
     
+    # Build event properties
+    event_properties = {"video_id": video_id}
+    if properties:
+        event_properties.update(properties)
+    
     # Build request data
     data = {
         "userId": user_id,
-        "event": "Payment Info Entered"
+        "event": "Video Playback Seek Completed",
+        "properties": event_properties
     }
-    
-    # Add properties if provided
-    if properties:
-        data["properties"] = properties
     
     # Add timestamp if provided
     if timestamp:
@@ -399,17 +467,18 @@ def track_payment_info_entered(
     return client.make_request("POST", "/track", data)
 
 
-def track_promotion_viewed(
+def track_video_playback_resumed(
     client: CustomerIOClient,
     user_id: str,
+    video_id: str,
     properties: Optional[Dict[str, Any]] = None,
     timestamp: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
-    Track a "Promotion Viewed" semantic event.
+    Track a "Video Playback Resumed" semantic event.
     
-    This event indicates that a user has viewed a promotional offer,
-    providing insights into promotion effectiveness and exposure.
+    This event indicates that video playback has been resumed after being
+    paused, providing insights into engagement recovery and viewing patterns.
     
     Parameters
     ----------
@@ -417,10 +486,12 @@ def track_promotion_viewed(
         Initialized Customer.IO API client
     user_id : str
         Unique identifier for the user
+    video_id : str
+        Unique identifier for the video
     properties : dict, optional
-        Additional properties (promotion_id, promotion_name, discount_type, etc.)
+        Additional properties (position, pause_duration, resume_trigger, etc.)
     timestamp : datetime, optional
-        When the promotion was viewed
+        When playback was resumed
         
     Returns
     -------
@@ -431,20 +502,25 @@ def track_promotion_viewed(
     if not user_id or not isinstance(user_id, str):
         raise ValidationError("User ID must be a non-empty string")
     
+    if not video_id or not isinstance(video_id, str):
+        raise ValidationError("Video ID must be a non-empty string")
+    
     validate_user_id(user_id)
     
     if properties is not None and not isinstance(properties, dict):
         raise ValidationError("Properties must be a dictionary")
     
+    # Build event properties
+    event_properties = {"video_id": video_id}
+    if properties:
+        event_properties.update(properties)
+    
     # Build request data
     data = {
         "userId": user_id,
-        "event": "Promotion Viewed"
+        "event": "Video Playback Resumed",
+        "properties": event_properties
     }
-    
-    # Add properties if provided
-    if properties:
-        data["properties"] = properties
     
     # Add timestamp if provided
     if timestamp:
@@ -453,17 +529,18 @@ def track_promotion_viewed(
     return client.make_request("POST", "/track", data)
 
 
-def track_promotion_clicked(
+def track_video_playback_completed(
     client: CustomerIOClient,
     user_id: str,
+    video_id: str,
     properties: Optional[Dict[str, Any]] = None,
     timestamp: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
-    Track a "Promotion Clicked" semantic event.
+    Track a "Video Playback Completed" semantic event.
     
-    This event indicates that a user has clicked on a promotional offer,
-    providing insights into promotion engagement and click-through rates.
+    This event indicates that video playback has completed successfully,
+    providing insights into completion rates and content effectiveness.
     
     Parameters
     ----------
@@ -471,10 +548,12 @@ def track_promotion_clicked(
         Initialized Customer.IO API client
     user_id : str
         Unique identifier for the user
+    video_id : str
+        Unique identifier for the video
     properties : dict, optional
-        Additional properties (promotion_id, cta_text, destination_url, etc.)
+        Additional properties (duration, completion_rate, total_watch_time, etc.)
     timestamp : datetime, optional
-        When the promotion was clicked
+        When playback completed
         
     Returns
     -------
@@ -485,20 +564,25 @@ def track_promotion_clicked(
     if not user_id or not isinstance(user_id, str):
         raise ValidationError("User ID must be a non-empty string")
     
+    if not video_id or not isinstance(video_id, str):
+        raise ValidationError("Video ID must be a non-empty string")
+    
     validate_user_id(user_id)
     
     if properties is not None and not isinstance(properties, dict):
         raise ValidationError("Properties must be a dictionary")
     
+    # Build event properties
+    event_properties = {"video_id": video_id}
+    if properties:
+        event_properties.update(properties)
+    
     # Build request data
     data = {
         "userId": user_id,
-        "event": "Promotion Clicked"
+        "event": "Video Playback Completed",
+        "properties": event_properties
     }
-    
-    # Add properties if provided
-    if properties:
-        data["properties"] = properties
     
     # Add timestamp if provided
     if timestamp:
@@ -507,17 +591,18 @@ def track_promotion_clicked(
     return client.make_request("POST", "/track", data)
 
 
-def track_coupon_entered(
+def track_video_playback_exited(
     client: CustomerIOClient,
     user_id: str,
+    video_id: str,
     properties: Optional[Dict[str, Any]] = None,
     timestamp: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
-    Track a "Coupon Entered" semantic event.
+    Track a "Video Playback Exited" semantic event.
     
-    This event indicates that a user has entered a coupon code,
-    providing insights into coupon usage attempts and marketing effectiveness.
+    This event indicates that the user has exited video playback before
+    completion, providing insights into drop-off patterns and exit reasons.
     
     Parameters
     ----------
@@ -525,10 +610,12 @@ def track_coupon_entered(
         Initialized Customer.IO API client
     user_id : str
         Unique identifier for the user
+    video_id : str
+        Unique identifier for the video
     properties : dict, optional
-        Additional properties (coupon_code, cart_value, checkout_id, etc.)
+        Additional properties (position, completion_rate, exit_reason, etc.)
     timestamp : datetime, optional
-        When the coupon was entered
+        When the user exited playback
         
     Returns
     -------
@@ -539,20 +626,25 @@ def track_coupon_entered(
     if not user_id or not isinstance(user_id, str):
         raise ValidationError("User ID must be a non-empty string")
     
+    if not video_id or not isinstance(video_id, str):
+        raise ValidationError("Video ID must be a non-empty string")
+    
     validate_user_id(user_id)
     
     if properties is not None and not isinstance(properties, dict):
         raise ValidationError("Properties must be a dictionary")
     
+    # Build event properties
+    event_properties = {"video_id": video_id}
+    if properties:
+        event_properties.update(properties)
+    
     # Build request data
     data = {
         "userId": user_id,
-        "event": "Coupon Entered"
+        "event": "Video Playback Exited",
+        "properties": event_properties
     }
-    
-    # Add properties if provided
-    if properties:
-        data["properties"] = properties
     
     # Add timestamp if provided
     if timestamp:
@@ -561,17 +653,18 @@ def track_coupon_entered(
     return client.make_request("POST", "/track", data)
 
 
-def track_coupon_applied(
+def track_video_content_started(
     client: CustomerIOClient,
     user_id: str,
+    content_id: str,
     properties: Optional[Dict[str, Any]] = None,
     timestamp: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
-    Track a "Coupon Applied" semantic event.
+    Track a "Video Content Started" semantic event.
     
-    This event indicates that a coupon has been successfully applied,
-    providing insights into coupon effectiveness and discount impact.
+    This event indicates that video content viewing has started, providing
+    insights into content engagement and viewing preferences.
     
     Parameters
     ----------
@@ -579,10 +672,12 @@ def track_coupon_applied(
         Initialized Customer.IO API client
     user_id : str
         Unique identifier for the user
+    content_id : str
+        Unique identifier for the content
     properties : dict, optional
-        Additional properties (coupon_code, discount_amount, cart_value_before/after, etc.)
+        Additional properties (title, category, duration, series, etc.)
     timestamp : datetime, optional
-        When the coupon was applied
+        When content viewing started
         
     Returns
     -------
@@ -593,20 +688,25 @@ def track_coupon_applied(
     if not user_id or not isinstance(user_id, str):
         raise ValidationError("User ID must be a non-empty string")
     
+    if not content_id or not isinstance(content_id, str):
+        raise ValidationError("Content ID must be a non-empty string")
+    
     validate_user_id(user_id)
     
     if properties is not None and not isinstance(properties, dict):
         raise ValidationError("Properties must be a dictionary")
     
+    # Build event properties
+    event_properties = {"content_id": content_id}
+    if properties:
+        event_properties.update(properties)
+    
     # Build request data
     data = {
         "userId": user_id,
-        "event": "Coupon Applied"
+        "event": "Video Content Started",
+        "properties": event_properties
     }
-    
-    # Add properties if provided
-    if properties:
-        data["properties"] = properties
     
     # Add timestamp if provided
     if timestamp:
@@ -615,17 +715,18 @@ def track_coupon_applied(
     return client.make_request("POST", "/track", data)
 
 
-def track_coupon_denied(
+def track_video_content_playing(
     client: CustomerIOClient,
     user_id: str,
+    content_id: str,
     properties: Optional[Dict[str, Any]] = None,
     timestamp: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
-    Track a "Coupon Denied" semantic event.
+    Track a "Video Content Playing" semantic event.
     
-    This event indicates that a coupon application was denied,
-    providing insights into coupon validation issues and user experience.
+    This event indicates ongoing video content consumption, providing insights
+    into viewing progress and engagement levels during playback.
     
     Parameters
     ----------
@@ -633,10 +734,12 @@ def track_coupon_denied(
         Initialized Customer.IO API client
     user_id : str
         Unique identifier for the user
+    content_id : str
+        Unique identifier for the content
     properties : dict, optional
-        Additional properties (coupon_code, denial_reason, error_message, etc.)
+        Additional properties (position, duration, playback_speed, quality, etc.)
     timestamp : datetime, optional
-        When the coupon was denied
+        When this playing event occurred
         
     Returns
     -------
@@ -647,20 +750,25 @@ def track_coupon_denied(
     if not user_id or not isinstance(user_id, str):
         raise ValidationError("User ID must be a non-empty string")
     
+    if not content_id or not isinstance(content_id, str):
+        raise ValidationError("Content ID must be a non-empty string")
+    
     validate_user_id(user_id)
     
     if properties is not None and not isinstance(properties, dict):
         raise ValidationError("Properties must be a dictionary")
     
+    # Build event properties
+    event_properties = {"content_id": content_id}
+    if properties:
+        event_properties.update(properties)
+    
     # Build request data
     data = {
         "userId": user_id,
-        "event": "Coupon Denied"
+        "event": "Video Content Playing",
+        "properties": event_properties
     }
-    
-    # Add properties if provided
-    if properties:
-        data["properties"] = properties
     
     # Add timestamp if provided
     if timestamp:
@@ -669,17 +777,18 @@ def track_coupon_denied(
     return client.make_request("POST", "/track", data)
 
 
-def track_coupon_removed(
+def track_video_content_completed(
     client: CustomerIOClient,
     user_id: str,
+    content_id: str,
     properties: Optional[Dict[str, Any]] = None,
     timestamp: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
-    Track a "Coupon Removed" semantic event.
+    Track a "Video Content Completed" semantic event.
     
-    This event indicates that a previously applied coupon has been removed,
-    providing insights into coupon management behavior and cart modifications.
+    This event indicates that video content has been fully consumed,
+    providing insights into content completion rates and viewer satisfaction.
     
     Parameters
     ----------
@@ -687,10 +796,12 @@ def track_coupon_removed(
         Initialized Customer.IO API client
     user_id : str
         Unique identifier for the user
+    content_id : str
+        Unique identifier for the content
     properties : dict, optional
-        Additional properties (coupon_code, discount_amount_lost, removal_reason, etc.)
+        Additional properties (duration, completion_rate, total_watch_time, engagement_score, etc.)
     timestamp : datetime, optional
-        When the coupon was removed
+        When content viewing completed
         
     Returns
     -------
@@ -701,20 +812,25 @@ def track_coupon_removed(
     if not user_id or not isinstance(user_id, str):
         raise ValidationError("User ID must be a non-empty string")
     
+    if not content_id or not isinstance(content_id, str):
+        raise ValidationError("Content ID must be a non-empty string")
+    
     validate_user_id(user_id)
     
     if properties is not None and not isinstance(properties, dict):
         raise ValidationError("Properties must be a dictionary")
     
+    # Build event properties
+    event_properties = {"content_id": content_id}
+    if properties:
+        event_properties.update(properties)
+    
     # Build request data
     data = {
         "userId": user_id,
-        "event": "Coupon Removed"
+        "event": "Video Content Completed",
+        "properties": event_properties
     }
-    
-    # Add properties if provided
-    if properties:
-        data["properties"] = properties
     
     # Add timestamp if provided
     if timestamp:
@@ -723,17 +839,18 @@ def track_coupon_removed(
     return client.make_request("POST", "/track", data)
 
 
-def track_product_added_to_wishlist(
+def track_video_ad_started(
     client: CustomerIOClient,
     user_id: str,
+    ad_id: str,
     properties: Optional[Dict[str, Any]] = None,
     timestamp: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
-    Track a "Product Added to Wishlist" semantic event.
+    Track a "Video Ad Started" semantic event.
     
-    This event indicates that a user has added a product to their wishlist,
-    providing insights into product interest and future purchase intent.
+    This event indicates that a video advertisement has started playing,
+    providing insights into ad engagement and revenue optimization.
     
     Parameters
     ----------
@@ -741,10 +858,12 @@ def track_product_added_to_wishlist(
         Initialized Customer.IO API client
     user_id : str
         Unique identifier for the user
+    ad_id : str
+        Unique identifier for the advertisement
     properties : dict, optional
-        Additional properties (product_id, product_name, wishlist_id, etc.)
+        Additional properties (ad_type, advertiser, duration, content_id, etc.)
     timestamp : datetime, optional
-        When the product was added to wishlist
+        When the ad started playing
         
     Returns
     -------
@@ -755,20 +874,25 @@ def track_product_added_to_wishlist(
     if not user_id or not isinstance(user_id, str):
         raise ValidationError("User ID must be a non-empty string")
     
+    if not ad_id or not isinstance(ad_id, str):
+        raise ValidationError("Ad ID must be a non-empty string")
+    
     validate_user_id(user_id)
     
     if properties is not None and not isinstance(properties, dict):
         raise ValidationError("Properties must be a dictionary")
     
+    # Build event properties
+    event_properties = {"ad_id": ad_id}
+    if properties:
+        event_properties.update(properties)
+    
     # Build request data
     data = {
         "userId": user_id,
-        "event": "Product Added to Wishlist"
+        "event": "Video Ad Started",
+        "properties": event_properties
     }
-    
-    # Add properties if provided
-    if properties:
-        data["properties"] = properties
     
     # Add timestamp if provided
     if timestamp:
@@ -777,17 +901,18 @@ def track_product_added_to_wishlist(
     return client.make_request("POST", "/track", data)
 
 
-def track_product_removed_from_wishlist(
+def track_video_ad_playing(
     client: CustomerIOClient,
     user_id: str,
+    ad_id: str,
     properties: Optional[Dict[str, Any]] = None,
     timestamp: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
-    Track a "Product Removed from Wishlist" semantic event.
+    Track a "Video Ad Playing" semantic event.
     
-    This event indicates that a user has removed a product from their wishlist,
-    providing insights into wishlist management and changing preferences.
+    This event indicates ongoing video advertisement playback, providing
+    insights into ad engagement levels and viewer attention during ads.
     
     Parameters
     ----------
@@ -795,10 +920,12 @@ def track_product_removed_from_wishlist(
         Initialized Customer.IO API client
     user_id : str
         Unique identifier for the user
+    ad_id : str
+        Unique identifier for the advertisement
     properties : dict, optional
-        Additional properties (product_id, wishlist_id, removal_reason, etc.)
+        Additional properties (position, duration, quartile, engagement_events, etc.)
     timestamp : datetime, optional
-        When the product was removed from wishlist
+        When this ad playing event occurred
         
     Returns
     -------
@@ -809,20 +936,25 @@ def track_product_removed_from_wishlist(
     if not user_id or not isinstance(user_id, str):
         raise ValidationError("User ID must be a non-empty string")
     
+    if not ad_id or not isinstance(ad_id, str):
+        raise ValidationError("Ad ID must be a non-empty string")
+    
     validate_user_id(user_id)
     
     if properties is not None and not isinstance(properties, dict):
         raise ValidationError("Properties must be a dictionary")
     
+    # Build event properties
+    event_properties = {"ad_id": ad_id}
+    if properties:
+        event_properties.update(properties)
+    
     # Build request data
     data = {
         "userId": user_id,
-        "event": "Product Removed from Wishlist"
+        "event": "Video Ad Playing",
+        "properties": event_properties
     }
-    
-    # Add properties if provided
-    if properties:
-        data["properties"] = properties
     
     # Add timestamp if provided
     if timestamp:
@@ -831,17 +963,18 @@ def track_product_removed_from_wishlist(
     return client.make_request("POST", "/track", data)
 
 
-def track_wishlist_product_added_to_cart(
+def track_video_ad_completed(
     client: CustomerIOClient,
     user_id: str,
+    ad_id: str,
     properties: Optional[Dict[str, Any]] = None,
     timestamp: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
-    Track a "Wishlist Product Added to Cart" semantic event.
+    Track a "Video Ad Completed" semantic event.
     
-    This event indicates that a user has moved a product from their wishlist
-    to their cart, providing insights into wishlist-to-purchase conversion.
+    This event indicates that a video advertisement has finished playing,
+    providing insights into ad completion rates and effectiveness.
     
     Parameters
     ----------
@@ -849,10 +982,12 @@ def track_wishlist_product_added_to_cart(
         Initialized Customer.IO API client
     user_id : str
         Unique identifier for the user
+    ad_id : str
+        Unique identifier for the advertisement
     properties : dict, optional
-        Additional properties (product_id, wishlist_id, cart_id, quantity, etc.)
+        Additional properties (duration, completion_rate, clicked, skipped, etc.)
     timestamp : datetime, optional
-        When the wishlist product was added to cart
+        When the ad completed
         
     Returns
     -------
@@ -863,182 +998,25 @@ def track_wishlist_product_added_to_cart(
     if not user_id or not isinstance(user_id, str):
         raise ValidationError("User ID must be a non-empty string")
     
-    validate_user_id(user_id)
-    
-    if properties is not None and not isinstance(properties, dict):
-        raise ValidationError("Properties must be a dictionary")
-    
-    # Build request data
-    data = {
-        "userId": user_id,
-        "event": "Wishlist Product Added to Cart"
-    }
-    
-    # Add properties if provided
-    if properties:
-        data["properties"] = properties
-    
-    # Add timestamp if provided
-    if timestamp:
-        data["timestamp"] = timestamp.isoformat()
-    
-    return client.make_request("POST", "/track", data)
-
-
-def track_product_shared(
-    client: CustomerIOClient,
-    user_id: str,
-    properties: Optional[Dict[str, Any]] = None,
-    timestamp: Optional[datetime] = None
-) -> Dict[str, Any]:
-    """
-    Track a "Product Shared" semantic event.
-    
-    This event indicates that a user has shared a product with others,
-    providing insights into social commerce and word-of-mouth marketing.
-    
-    Parameters
-    ----------
-    client : CustomerIOClient
-        Initialized Customer.IO API client
-    user_id : str
-        Unique identifier for the user
-    properties : dict, optional
-        Additional properties (product_id, share_method, platform, share_url, etc.)
-    timestamp : datetime, optional
-        When the product was shared
-        
-    Returns
-    -------
-    dict
-        API response containing operation status
-    """
-    # Validate inputs
-    if not user_id or not isinstance(user_id, str):
-        raise ValidationError("User ID must be a non-empty string")
+    if not ad_id or not isinstance(ad_id, str):
+        raise ValidationError("Ad ID must be a non-empty string")
     
     validate_user_id(user_id)
     
     if properties is not None and not isinstance(properties, dict):
         raise ValidationError("Properties must be a dictionary")
     
-    # Build request data
-    data = {
-        "userId": user_id,
-        "event": "Product Shared"
-    }
-    
-    # Add properties if provided
+    # Build event properties
+    event_properties = {"ad_id": ad_id}
     if properties:
-        data["properties"] = properties
-    
-    # Add timestamp if provided
-    if timestamp:
-        data["timestamp"] = timestamp.isoformat()
-    
-    return client.make_request("POST", "/track", data)
-
-
-def track_cart_shared(
-    client: CustomerIOClient,
-    user_id: str,
-    properties: Optional[Dict[str, Any]] = None,
-    timestamp: Optional[datetime] = None
-) -> Dict[str, Any]:
-    """
-    Track a "Cart Shared" semantic event.
-    
-    This event indicates that a user has shared their cart with others,
-    providing insights into social commerce and collaborative shopping.
-    
-    Parameters
-    ----------
-    client : CustomerIOClient
-        Initialized Customer.IO API client
-    user_id : str
-        Unique identifier for the user
-    properties : dict, optional
-        Additional properties (cart_id, cart_value, items_count, share_method, etc.)
-    timestamp : datetime, optional
-        When the cart was shared
-        
-    Returns
-    -------
-    dict
-        API response containing operation status
-    """
-    # Validate inputs
-    if not user_id or not isinstance(user_id, str):
-        raise ValidationError("User ID must be a non-empty string")
-    
-    validate_user_id(user_id)
-    
-    if properties is not None and not isinstance(properties, dict):
-        raise ValidationError("Properties must be a dictionary")
+        event_properties.update(properties)
     
     # Build request data
     data = {
         "userId": user_id,
-        "event": "Cart Shared"
+        "event": "Video Ad Completed",
+        "properties": event_properties
     }
-    
-    # Add properties if provided
-    if properties:
-        data["properties"] = properties
-    
-    # Add timestamp if provided
-    if timestamp:
-        data["timestamp"] = timestamp.isoformat()
-    
-    return client.make_request("POST", "/track", data)
-
-
-def track_product_reviewed(
-    client: CustomerIOClient,
-    user_id: str,
-    properties: Optional[Dict[str, Any]] = None,
-    timestamp: Optional[datetime] = None
-) -> Dict[str, Any]:
-    """
-    Track a "Product Reviewed" semantic event.
-    
-    This event indicates that a user has written a review for a product,
-    providing insights into customer satisfaction and engagement with products.
-    
-    Parameters
-    ----------
-    client : CustomerIOClient
-        Initialized Customer.IO API client
-    user_id : str
-        Unique identifier for the user
-    properties : dict, optional
-        Additional properties (product_id, rating, review_title, verified_purchase, etc.)
-    timestamp : datetime, optional
-        When the product was reviewed
-        
-    Returns
-    -------
-    dict
-        API response containing operation status
-    """
-    # Validate inputs
-    if not user_id or not isinstance(user_id, str):
-        raise ValidationError("User ID must be a non-empty string")
-    
-    validate_user_id(user_id)
-    
-    if properties is not None and not isinstance(properties, dict):
-        raise ValidationError("Properties must be a dictionary")
-    
-    # Build request data
-    data = {
-        "userId": user_id,
-        "event": "Product Reviewed"
-    }
-    
-    # Add properties if provided
-    if properties:
-        data["properties"] = properties
     
     # Add timestamp if provided
     if timestamp:
