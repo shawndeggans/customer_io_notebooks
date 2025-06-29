@@ -113,7 +113,7 @@ class TestGroupTraits:
     
     def test_required_name_field(self):
         """Test that name field is required."""
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             GroupTraits()
     
     def test_default_type_field(self):
@@ -137,12 +137,12 @@ class TestGroupTraits:
     
     def test_negative_monthly_spend_validation(self):
         """Test validation of negative monthly spend."""
-        with pytest.raises(ValidationError, match="ensure this value is greater than or equal to 0"):
+        with pytest.raises(ValidationError, match="Input should be greater than or equal to 0"):
             GroupTraits(name="Test", monthly_spend=-100)
     
     def test_negative_employee_count_validation(self):
         """Test validation of negative employee count."""
-        with pytest.raises(ValidationError, match="ensure this value is greater than or equal to 0"):
+        with pytest.raises(ValidationError, match="Input should be greater than or equal to 0"):
             GroupTraits(name="Test", employee_count=-1)
     
     def test_optional_fields(self):
@@ -182,7 +182,7 @@ class TestUserGroupRelationship:
     
     def test_required_fields(self):
         """Test that required fields are validated."""
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             UserGroupRelationship()
     
     def test_default_status(self):
@@ -265,7 +265,7 @@ class TestObjectHierarchy:
     
     def test_required_fields(self):
         """Test that required fields are validated."""
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             ObjectHierarchy()
     
     def test_default_relationship_type(self):
@@ -290,7 +290,7 @@ class TestObjectHierarchy:
     
     def test_negative_level_validation(self):
         """Test validation of negative hierarchy level."""
-        with pytest.raises(ValidationError, match="ensure this value is greater than or equal to 0"):
+        with pytest.raises(ValidationError, match="Input should be greater than or equal to 0"):
             ObjectHierarchy(
                 parent_id="company_123",
                 child_id="team_456",

@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any, Set, Union
 from enum import Enum
 import structlog
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 import json
 
 from .api_client import CustomerIOClient
@@ -64,21 +64,19 @@ class GroupTraits(BaseModel):
     monthly_spend: Optional[float] = Field(None, ge=0, description="Monthly spend")
     employee_count: Optional[int] = Field(None, ge=0, description="Number of employees")
     
-    @validator('website')
+    @field_validator('website')
+    @classmethod
     def validate_website(cls, v: Optional[str]) -> Optional[str]:
         """Validate website URL format."""
         if v and not v.startswith(('http://', 'https://')):
             v = f'https://{v}'
         return v
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class UserGroupRelationship(BaseModel):
-    """Type-safe user-group relationship model."""
     user_id: str = Field(..., description="User identifier")
     group_id: str = Field(..., description="Group identifier")
     role: RelationshipRole = Field(..., description="User role in group")
@@ -87,21 +85,19 @@ class UserGroupRelationship(BaseModel):
     permissions: List[str] = Field(default_factory=list, description="User permissions")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
     
-    @validator('user_id', 'group_id')
+    @field_validator('user_id', 'group_id')
+    @classmethod
     def validate_ids(cls, v: str) -> str:
         """Validate ID format."""
         if not v or len(v.strip()) == 0:
             raise ValueError("ID cannot be empty")
         return v.strip()
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class ObjectHierarchy(BaseModel):
-    """Type-safe object hierarchy model."""
     parent_id: str = Field(..., description="Parent object ID")
     child_id: str = Field(..., description="Child object ID")
     relationship_type: str = Field(default="contains", description="Type of hierarchy")
@@ -109,7 +105,8 @@ class ObjectHierarchy(BaseModel):
     path: str = Field(..., description="Full hierarchy path")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
-    @validator('child_id')
+    @field_validator('child_id')
+    @classmethod
     def validate_no_circular_reference(cls, v: str, values: Dict) -> str:
         """Validate no circular references."""
         if 'parent_id' in values and v == values['parent_id']:
@@ -200,7 +197,7 @@ class GroupManager:
             group_data = {
                 "userId": user_id,
                 "groupId": group_id,
-                "traits": group_traits.dict(exclude_none=True),
+                "traits": group_traits.model_dump(exclude_none=True),
                 "timestamp": datetime.now(timezone.utc)
             }
             
@@ -215,7 +212,7 @@ class GroupManager:
             group_request = GroupRequest(**group_data)
             
             # Send to Customer.IO
-            response = self.client.group(**group_request.dict())
+            response = self.client.group(**group_request.model_dump())
             
             self.logger.info(
                 "Group created/updated successfully",
@@ -441,7 +438,7 @@ class GroupManager:
                 
                 batch_request = {
                     "type": "group",
-                    **group_request.dict()
+                    **group_request.model_dump()
                 }
                 batch_requests.append(batch_request)
             
@@ -730,3 +727,184 @@ class GroupManager:
         }
         
         return metrics
+    
+    @retry_on_error(max_retries=3, backoff_factor=2.0)
+    def delete_group(
+        self,
+        user_id: str,
+        group_id: str,
+        reason: str = "user_request"
+    ) -> Dict[str, Any]:
+        """
+        Delete a group using semantic event.
+        
+        Args:
+            user_id: User deleting the group
+            group_id: Group identifier to delete
+            reason: Reason for deletion
+            
+        Returns:
+            API response dictionary
+        """
+        
+        try:
+            # Send group deletion as semantic event
+            response = self.client.track(
+                user_id=user_id,
+                event="Group Deleted",
+                properties={
+                    "group_id": group_id,
+                    "reason": reason,
+                    "deleted_at": datetime.now(timezone.utc).isoformat()
+                },
+                timestamp=datetime.now(timezone.utc)
+            )
+            
+            self.logger.info(
+                "Group deleted successfully",
+                user_id=user_id,
+                group_id=group_id,
+                reason=reason
+            )
+            
+            return response
+            
+        except Exception as e:
+            self.logger.error(
+                "Failed to delete group",
+                user_id=user_id,
+                group_id=group_id,
+                error=str(e)
+            )
+            raise
+    
+    @retry_on_error(max_retries=3, backoff_factor=2.0)
+    def delete_relationship(
+        self,
+        user_id: str,
+        group_id: str,
+        reason: str = "user_request"
+    ) -> Dict[str, Any]:
+        """
+        Delete a user-group relationship using semantic event.
+        
+        Args:
+            user_id: User involved in the relationship
+            group_id: Group involved in the relationship
+            reason: Reason for deletion
+            
+        Returns:
+            API response dictionary
+        """
+        
+        try:
+            # Send relationship deletion as semantic event
+            response = self.client.track(
+                user_id=user_id,
+                event="Relationship Deleted",
+                properties={
+                    "group_id": group_id,
+                    "reason": reason,
+                    "deleted_at": datetime.now(timezone.utc).isoformat()
+                },
+                timestamp=datetime.now(timezone.utc)
+            )
+            
+            self.logger.info(
+                "Relationship deleted successfully",
+                user_id=user_id,
+                group_id=group_id,
+                reason=reason
+            )
+            
+            return response
+            
+        except Exception as e:
+            self.logger.error(
+                "Failed to delete relationship",
+                user_id=user_id,
+                group_id=group_id,
+                error=str(e)
+            )
+            raise
+    
+    @retry_on_error(max_retries=3, backoff_factor=2.0)
+    def delete_object(
+        self,
+        user_id: str,
+        object_id: str,
+        object_type: str,
+        reason: str = "user_request"
+    ) -> Dict[str, Any]:
+        """
+        Delete a generic object using semantic event.
+        
+        Args:
+            user_id: User deleting the object
+            object_id: Object identifier to delete
+            object_type: Type of object being deleted
+            reason: Reason for deletion
+            
+        Returns:
+            API response dictionary
+        """
+        
+        try:
+            # Send object deletion as semantic event
+            response = self.client.track(
+                user_id=user_id,
+                event="Object Deleted",
+                properties={
+                    "object_id": object_id,
+                    "object_type": object_type,
+                    "reason": reason,
+                    "deleted_at": datetime.now(timezone.utc).isoformat()
+                },
+                timestamp=datetime.now(timezone.utc)
+            )
+            
+            self.logger.info(
+                "Object deleted successfully",
+                user_id=user_id,
+                object_id=object_id,
+                object_type=object_type,
+                reason=reason
+            )
+            
+            return response
+            
+        except Exception as e:
+            self.logger.error(
+                "Failed to delete object",
+                user_id=user_id,
+                object_id=object_id,
+                object_type=object_type,
+                error=str(e)
+            )
+            raise
+    
+    def get_metrics(self) -> Dict[str, Any]:
+        """
+        Get GroupManager metrics and status.
+        
+        Returns:
+            GroupManager metrics dictionary
+        """
+        
+        return {
+            "client": {
+                "base_url": getattr(self.client, 'base_url', 'unknown'),
+                "region": getattr(self.client, 'region', 'unknown'),
+                "timeout": getattr(self.client, 'timeout', 30),
+                "max_retries": getattr(self.client, 'max_retries', 3)
+            },
+            "supported_types": {
+                "object_types": [obj_type.value for obj_type in ObjectType],
+                "relationship_roles": [role.value for role in RelationshipRole],
+                "relationship_statuses": [status.value for status in RelationshipStatus]
+            },
+            "validation": {
+                "max_request_size_bytes": 32 * 1024,
+                "max_batch_size_bytes": 500 * 1024
+            }
+        }

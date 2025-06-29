@@ -85,12 +85,12 @@ class TestEventTemplate:
     
     def test_required_name_field(self):
         """Test that name field is required."""
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             EventTemplate(category=EventCategory.CUSTOM)
     
     def test_required_category_field(self):
         """Test that category field is required."""
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             EventTemplate(name="Test Event")
     
     def test_default_priority(self):
@@ -150,7 +150,7 @@ class TestEventSession:
     
     def test_required_fields(self):
         """Test that required fields are validated."""
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             EventSession()
     
     def test_session_id_validation_empty(self):

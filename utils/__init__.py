@@ -10,6 +10,7 @@ from .validators import (
     IdentifyRequest,
     TrackRequest,
     GroupRequest,
+    AliasRequest,
     DeviceRequest,
     BatchRequest
 )
@@ -18,6 +19,9 @@ from .transformers import (
     EventTransformer,
     GroupTransformer
 )
+from .people_manager import PeopleManager
+from .event_manager import EventManager
+from .device_manager import DeviceManager
 from .error_handlers import (
     CustomerIOError,
     RateLimitError,
@@ -31,11 +35,15 @@ __all__ = [
     "IdentifyRequest",
     "TrackRequest", 
     "GroupRequest",
+    "AliasRequest",
     "DeviceRequest",
     "BatchRequest",
     "CustomerTransformer",
     "EventTransformer",
     "GroupTransformer",
+    "PeopleManager",
+    "EventManager",
+    "DeviceManager",
     "CustomerIOError",
     "RateLimitError",
     "ValidationError",

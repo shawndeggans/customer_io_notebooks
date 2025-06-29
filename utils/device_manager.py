@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any, Set, Union
 from enum import Enum
 import structlog
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 import json
 import re
 
@@ -61,7 +61,8 @@ class DeviceInfo(BaseModel):
     app_version: Optional[str] = Field(None, description="Application version")
     push_provider: Optional[PushProvider] = Field(None, description="Push provider")
     
-    @validator('token')
+    @field_validator('token')
+    @classmethod
     def validate_token(cls, v: str) -> str:
         """Validate push token format."""
         if not v or len(v.strip()) == 0:
@@ -70,10 +71,10 @@ class DeviceInfo(BaseModel):
             raise ValueError("Push token appears to be too short")
         return v.strip()
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
 
 class DeviceAttributes(BaseModel):
@@ -88,7 +89,8 @@ class DeviceAttributes(BaseModel):
     screen_height: Optional[int] = Field(None, ge=0, description="Screen height in pixels")
     last_seen: Optional[datetime] = Field(None, description="Last activity timestamp")
     
-    @validator('timezone')
+    @field_validator('timezone')
+    @classmethod
     def validate_timezone(cls, v: Optional[str]) -> Optional[str]:
         """Validate timezone format."""
         if v and '/' not in v:
@@ -96,12 +98,18 @@ class DeviceAttributes(BaseModel):
             raise ValueError("Timezone should be in region/city format (e.g., America/New_York)")
         return v
     
-    @validator('locale')
+    @field_validator('locale')
+    @classmethod
     def validate_locale(cls, v: Optional[str]) -> Optional[str]:
         """Validate locale format."""
         if v and not re.match(r'^[a-z]{2}(-[A-Z]{2})?$', v):
             raise ValueError("Locale should be in format 'en' or 'en-US'")
         return v
+    
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
 
 class DeviceRegistration(BaseModel):
@@ -112,17 +120,18 @@ class DeviceRegistration(BaseModel):
     status: DeviceStatus = Field(default=DeviceStatus.ACTIVE, description="Device status")
     registered_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
-    @validator('user_id')
+    @field_validator('user_id')
+    @classmethod
     def validate_user_id(cls, v: str) -> str:
         """Validate user ID format."""
         if not v or len(v.strip()) == 0:
             raise ValueError("User ID cannot be empty")
         return v.strip()
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
 
 class DeviceManager:
@@ -139,7 +148,7 @@ class DeviceManager:
         context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Register a device with Customer.IO with comprehensive validation.
+        Register a device with Customer.IO using semantic event.
         
         Args:
             device_registration: DeviceRegistration object with device data
@@ -154,35 +163,25 @@ class DeviceManager:
         """
         
         try:
-            # Create device request
-            device_data = {
-                "device": {
-                    "token": device_registration.device_info.token,
-                    "type": device_registration.device_info.type,
-                    **device_registration.device_info.dict(exclude={'token', 'type'}, exclude_none=True)
-                }
-            }
-            
-            # Add device attributes
-            if device_registration.attributes:
-                device_data["device"].update(
-                    device_registration.attributes.dict(exclude_none=True)
-                )
-            
-            if context:
-                device_data["context"] = context
-            
-            # Validate request size
-            if not validate_request_size(device_data):
-                raise ValueError("Device data exceeds 32KB limit")
-            
-            # Validate with DeviceRequest model
-            device_request = DeviceRequest(**device_data)
-            
-            # Send to Customer.IO
-            response = self.client.add_device(
+            # Send device registration as semantic event
+            response = self.client.track(
                 user_id=device_registration.user_id,
-                **device_request.dict()
+                event="Device Created or Updated",
+                properties={
+                    "device_type": device_registration.device_info.type,
+                    "device_token": device_registration.device_info.token[:20] + "...",  # Truncate for privacy
+                    "device_model": device_registration.device_info.device_model,
+                    "os_version": device_registration.device_info.os_version,
+                    "app_version": device_registration.device_info.app_version,
+                    "push_provider": device_registration.device_info.push_provider,
+                    "push_enabled": device_registration.attributes.push_enabled,
+                    "timezone": device_registration.attributes.timezone,
+                    "locale": device_registration.attributes.locale,
+                    "status": device_registration.status,
+                    "registered_at": device_registration.registered_at.isoformat()
+                },
+                timestamp=device_registration.registered_at,
+                context=context
             )
             
             self.logger.info(
@@ -300,6 +299,7 @@ class DeviceManager:
         
         return event_data
     
+    @retry_on_error(max_retries=3, backoff_factor=2.0)
     def remove_device(
         self,
         user_id: str,
@@ -308,7 +308,7 @@ class DeviceManager:
         reason: str = "user_request"
     ) -> Dict[str, Any]:
         """
-        Remove device registration with tracking.
+        Remove device registration using semantic event.
         
         Args:
             user_id: User identifier
@@ -317,29 +317,40 @@ class DeviceManager:
             reason: Reason for removal
             
         Returns:
-            Event data dictionary
+            API response dictionary
         """
         
-        event_data = {
-            "userId": user_id,
-            "event": "Device Removed",
-            "properties": {
-                "device_token": device_token[:20] + "...",  # Truncate for privacy
-                "device_type": device_type,
-                "reason": reason,
-                "removed_at": datetime.now(timezone.utc).isoformat()
-            },
-            "timestamp": datetime.now(timezone.utc)
-        }
-        
-        self.logger.info(
-            "Device removed",
-            user_id=user_id,
-            device_type=device_type,
-            reason=reason
-        )
-        
-        return event_data
+        try:
+            # Send device deletion as semantic event
+            response = self.client.track(
+                user_id=user_id,
+                event="Device Deleted",
+                properties={
+                    "device_token": device_token[:20] + "...",  # Truncate for privacy
+                    "device_type": device_type,
+                    "reason": reason,
+                    "deleted_at": datetime.now(timezone.utc).isoformat()
+                },
+                timestamp=datetime.now(timezone.utc)
+            )
+            
+            self.logger.info(
+                "Device deleted successfully",
+                user_id=user_id,
+                device_type=device_type,
+                reason=reason
+            )
+            
+            return response
+            
+        except Exception as e:
+            self.logger.error(
+                "Failed to delete device",
+                user_id=user_id,
+                device_type=device_type,
+                error=str(e)
+            )
+            raise
     
     def batch_register_devices(
         self,

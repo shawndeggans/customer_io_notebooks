@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from collections import defaultdict, deque
 from enum import Enum
 import structlog
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 import statistics
 import uuid
 import psutil
@@ -75,7 +75,8 @@ class Metric(BaseModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     source: str = Field(..., description="Metric source")
     
-    @validator('name')
+    @field_validator('name')
+    @classmethod
     def validate_name(cls, v: str) -> str:
         """Validate metric name format."""
         if not v or len(v.strip()) == 0:
@@ -85,14 +86,11 @@ class Metric(BaseModel):
             raise ValueError("Metric name must contain only alphanumeric, underscore, dot, or dash characters")
         return v.strip()
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class Alert(BaseModel):
-    """Type-safe alert model."""
     alert_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str = Field(..., description="Alert name")
     severity: AlertSeverity = Field(..., description="Alert severity")
@@ -113,14 +111,11 @@ class Alert(BaseModel):
         """Mark alert as resolved."""
         self.resolved_at = datetime.now(timezone.utc)
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class HealthCheck(BaseModel):
-    """Type-safe health check model."""
     check_id: str = Field(..., description="Health check identifier")
     name: str = Field(..., description="Check name")
     status: HealthStatus = Field(..., description="Check status")
@@ -135,14 +130,11 @@ class HealthCheck(BaseModel):
         """Check if health check is passing."""
         return self.status == HealthStatus.HEALTHY
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class TraceSpan(BaseModel):
-    """Type-safe distributed tracing span model."""
     trace_id: str = Field(..., description="Trace identifier")
     span_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     parent_span_id: Optional[str] = Field(None, description="Parent span identifier")
@@ -171,14 +163,11 @@ class TraceSpan(BaseModel):
         }
         self.logs.append(log_entry)
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class MetricsCollector:
-    """High-performance metrics collection system."""
     
     def __init__(self, buffer_size: int = 10000, flush_interval_seconds: int = 60):
         self.buffer_size = buffer_size
@@ -334,14 +323,11 @@ class AlertRule(BaseModel):
         else:
             return False
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class AlertManager:
-    """Intelligent alerting system with threshold management."""
     
     def __init__(self, metrics_collector: MetricsCollector):
         self.metrics_collector = metrics_collector
@@ -612,7 +598,7 @@ class HealthMonitor:
         
         return {
             "status": overall_status,
-            "checks": {check_id: check.dict() for check_id, check in self.health_checks.items()},
+            "checks": {check_id: check.model_dump() for check_id, check in self.health_checks.items()},
             "summary": {
                 "total_checks": total_checks,
                 "healthy_checks": healthy_checks,
@@ -861,7 +847,7 @@ class DistributedTracer:
         def build_tree(span: TraceSpan) -> Dict[str, Any]:
             children = [s for s in spans if s.parent_span_id == span.span_id]
             return {
-                "span": span.dict(),
+                "span": span.model_dump(),
                 "children": [build_tree(child) for child in children]
             }
         
@@ -1122,7 +1108,7 @@ class ObservabilityManager:
             "report_generated_at": datetime.now(timezone.utc).isoformat(),
             "overall_health": system_health["status"],
             "health_checks": health_checks,
-            "active_alerts": [alert.dict() for alert in active_alerts],
+            "active_alerts": [alert.model_dump() for alert in active_alerts],
             "system_metrics": dashboard_data,
             "recommendations": recommendations,
             "summary": {

@@ -31,7 +31,7 @@ import hashlib
 import re
 from abc import ABC, abstractmethod
 import structlog
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from .api_client import CustomerIOClient
 from .error_handlers import retry_on_error, ErrorContext
@@ -109,7 +109,8 @@ class DataQualityMetrics(BaseModel):
     validation_rules_failed: int = Field(default=0, ge=0, description="Number of validation rules failed")
     quality_issues: List[str] = Field(default_factory=list, description="List of quality issues")
     
-    @validator('valid_records', 'invalid_records')
+    @field_validator('valid_records', 'invalid_records')
+    @classmethod
     def validate_record_counts(cls, v: int, values: Dict) -> int:
         """Validate record counts are consistent."""
         if 'total_records' in values:
@@ -142,13 +143,11 @@ class DataQualityMetrics(BaseModel):
         """Check if data quality meets threshold."""
         return self.quality_score >= threshold
     
-    class Config:
-        """Pydantic model configuration."""
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class PipelineStage(BaseModel):
-    """Type-safe pipeline stage model."""
     stage_id: str = Field(..., description="Unique stage identifier")
     stage_name: str = Field(..., description="Human-readable stage name")
     stage_type: PipelineStageType = Field(..., description="Type of pipeline stage")
@@ -170,7 +169,8 @@ class PipelineStage(BaseModel):
     error_message: Optional[str] = Field(None, description="Error message if failed")
     quality_metrics: Optional[DataQualityMetrics] = Field(None, description="Quality metrics")
     
-    @validator('stage_id')
+    @field_validator('stage_id')
+    @classmethod
     def validate_stage_id(cls, v: str) -> str:
         """Validate stage ID format."""
         if not v or len(v.strip()) == 0:
@@ -197,14 +197,11 @@ class PipelineStage(BaseModel):
         elapsed = datetime.now(timezone.utc) - self.started_at
         return elapsed.total_seconds() > (self.timeout_minutes * 60)
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class PipelineExecution(BaseModel):
-    """Type-safe pipeline execution model."""
     execution_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     pipeline_id: str = Field(..., description="Pipeline identifier")
     pipeline_name: str = Field(..., description="Pipeline name")
@@ -230,7 +227,8 @@ class PipelineExecution(BaseModel):
     overall_quality_score: Optional[float] = Field(None, ge=0.0, le=1.0, description="Overall quality score")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Execution metadata")
     
-    @validator('stages')
+    @field_validator('stages')
+    @classmethod
     def validate_stages(cls, v: List[PipelineStage]) -> List[PipelineStage]:
         """Validate pipeline stages."""
         if not v:
@@ -288,14 +286,11 @@ class PipelineExecution(BaseModel):
                 self.completed_at - self.started_at
             ).total_seconds() / 60
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class PipelineStageExecutor(ABC):
-    """Abstract base class for pipeline stage executors."""
     
     def __init__(self, stage: PipelineStage):
         self.stage = stage

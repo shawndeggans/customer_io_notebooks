@@ -17,7 +17,7 @@ from enum import Enum
 from collections import defaultdict, deque
 import statistics
 import structlog
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from .api_client import CustomerIOClient
 from .event_manager import EventManager
@@ -74,17 +74,18 @@ class JourneyStep(BaseModel):
     stage: Optional[JourneyStage] = Field(None, description="Journey stage")
     duration_seconds: Optional[float] = Field(None, ge=0, description="Time spent in step")
     
-    @validator('step_id')
+    @field_validator('step_id')
+    @classmethod
     def validate_step_id(cls, v: str) -> str:
         """Validate step ID format."""
         if not v or len(v.strip()) == 0:
             raise ValueError("Step ID cannot be empty")
         return v.strip().lower()
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
 
 class UserJourney(BaseModel):
@@ -99,14 +100,16 @@ class UserJourney(BaseModel):
     conversion_value: Optional[float] = Field(None, ge=0, description="Conversion value")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Journey metadata")
     
-    @validator('journey_id', 'user_id')
+    @field_validator('journey_id', 'user_id')
+    @classmethod
     def validate_ids(cls, v: str) -> str:
         """Validate ID formats."""
         if not v or len(v.strip()) == 0:
             raise ValueError("ID cannot be empty")
         return v.strip()
     
-    @validator('steps')
+    @field_validator('steps')
+    @classmethod
     def validate_step_order(cls, v: List[JourneyStep]) -> List[JourneyStep]:
         """Validate steps are in chronological order."""
         if len(v) > 1:
@@ -130,10 +133,10 @@ class UserJourney(BaseModel):
         
         return (end_time - start_time).total_seconds() / 60
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
 
 class FunnelStep(BaseModel):
@@ -144,9 +147,9 @@ class FunnelStep(BaseModel):
     required: bool = Field(default=True, description="Whether step is required")
     time_window_hours: Optional[int] = Field(None, ge=1, description="Time window for step completion")
     
-    class Config:
-        """Pydantic model configuration."""
-        validate_assignment = True
+    model_config = {
+        "validate_assignment": True
+    }
 
 
 class ConversionFunnel(BaseModel):
@@ -158,7 +161,8 @@ class ConversionFunnel(BaseModel):
     attribution_model: AttributionModel = Field(default=AttributionModel.LAST_TOUCH)
     lookback_days: int = Field(default=30, ge=1, le=365, description="Attribution lookback period")
     
-    @validator('steps')
+    @field_validator('steps')
+    @classmethod
     def validate_step_order(cls, v: List[FunnelStep]) -> List[FunnelStep]:
         """Validate steps are in correct order."""
         if not v:
@@ -174,10 +178,10 @@ class ConversionFunnel(BaseModel):
         
         return v
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
 
 class AttributionTouchpoint(BaseModel):
@@ -193,16 +197,17 @@ class AttributionTouchpoint(BaseModel):
     conversion_value: Optional[float] = Field(None, ge=0, description="Associated conversion value")
     position_in_journey: int = Field(..., ge=1, description="Position in customer journey")
     
-    @validator('touchpoint_id', 'user_id', 'channel')
+    @field_validator('touchpoint_id', 'user_id', 'channel')
+    @classmethod
     def validate_required_fields(cls, v: str) -> str:
         """Validate required fields are not empty."""
         if not v or len(v.strip()) == 0:
             raise ValueError("Field cannot be empty")
         return v.strip()
     
-    class Config:
-        """Pydantic model configuration."""
-        validate_assignment = True
+    model_config = {
+        "validate_assignment": True
+    }
 
 
 class RealTimePatternDetector:

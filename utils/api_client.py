@@ -578,6 +578,41 @@ class CustomerIOClient:
         data = {"batch": requests}
         return self._make_request("POST", "/batch", data)
     
+    def alias(
+        self,
+        previous_id: str,
+        user_id: str
+    ) -> Dict[str, Any]:
+        """
+        Merge profiles by aliasing a previous identifier to a current user ID.
+        
+        This method reconciles identifiers when anonymous users become identified users.
+        Primarily used for destinations like Mixpanel that don't automatically handle
+        identity changes.
+        
+        Args:
+            previous_id: The identifier you want to merge (usually anonymous)
+            user_id: The identifier you want to keep (usually identified)
+            
+        Returns:
+            API response (empty dict on success)
+            
+        Raises:
+            CIOValidationError: If required parameters are missing
+            CustomerIOError: If API call fails
+        """
+        if not previous_id:
+            raise CIOValidationError("previous_id is required")
+        if not user_id:
+            raise CIOValidationError("user_id is required")
+        
+        data = {
+            "previousId": previous_id,
+            "userId": user_id
+        }
+        
+        return self._make_request("POST", "/alias", data, customer_id=user_id)
+    
     def get_region(self) -> Dict[str, Any]:
         """
         Get the region information for the account.

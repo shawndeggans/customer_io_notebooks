@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Any, Union
 import re
 
-from pydantic import BaseModel, Field, validator, model_validator, ValidationError
+from pydantic import BaseModel, Field, field_validator, model_validator, ValidationError
 
 
 class IdentifyRequest(BaseModel):
@@ -28,7 +28,8 @@ class IdentifyRequest(BaseModel):
             raise ValueError('Either userId or anonymousId must be provided')
         return self
     
-    @validator('userId')
+    @field_validator('userId')
+    @classmethod
     def validate_user_id(cls, v):
         """Validate user ID format."""
         if v is not None:
@@ -38,7 +39,8 @@ class IdentifyRequest(BaseModel):
                 raise ValueError('userId cannot exceed 255 characters')
         return v
     
-    @validator('anonymousId')
+    @field_validator('anonymousId')
+    @classmethod
     def validate_anonymous_id(cls, v):
         """Validate anonymous ID format."""
         if v is not None:
@@ -48,15 +50,20 @@ class IdentifyRequest(BaseModel):
                 raise ValueError('anonymousId cannot exceed 255 characters')
         return v
     
-    @validator('traits')
+    @field_validator('traits')
+    @classmethod
     def validate_traits(cls, v):
         """Validate traits object."""
         if v is not None:
             # Check for common email validation if email is provided
             if 'email' in v and v['email']:
+                # Strip whitespace first, then validate
+                email = v['email'].strip()
                 email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-                if not re.match(email_pattern, v['email']):
+                if not re.match(email_pattern, email):
                     raise ValueError('Invalid email format in traits')
+                # Update with cleaned email
+                v['email'] = email.lower()
         return v
 
 
@@ -77,7 +84,8 @@ class TrackRequest(BaseModel):
             raise ValueError('Either userId or anonymousId must be provided')
         return self
     
-    @validator('event')
+    @field_validator('event')
+    @classmethod
     def validate_event_name(cls, v):
         """Validate event name format."""
         if not v or len(v.strip()) == 0:
@@ -104,7 +112,8 @@ class GroupRequest(BaseModel):
             raise ValueError('Either userId or anonymousId must be provided')
         return self
     
-    @validator('groupId')
+    @field_validator('groupId')
+    @classmethod
     def validate_group_id(cls, v):
         """Validate group ID format."""
         if not v or len(v.strip()) == 0:
@@ -150,12 +159,42 @@ class ScreenRequest(BaseModel):
         return self
 
 
+class AliasRequest(BaseModel):
+    """Validation model for /alias API requests."""
+    
+    previousId: str = Field(..., description="Previous identifier to alias")
+    userId: str = Field(..., description="User identifier to keep")
+    timestamp: Optional[datetime] = Field(None, description="Event timestamp")
+    context: Optional[Dict[str, Any]] = Field(None, description="Additional context data")
+    
+    @field_validator('previousId')
+    @classmethod
+    def validate_previous_id(cls, v):
+        """Validate previous ID format."""
+        if not v or len(v.strip()) == 0:
+            raise ValueError('previousId cannot be empty')
+        if len(v) > 255:
+            raise ValueError('previousId cannot exceed 255 characters')
+        return v.strip()
+    
+    @field_validator('userId')
+    @classmethod
+    def validate_user_id(cls, v):
+        """Validate user ID format."""
+        if not v or len(v.strip()) == 0:
+            raise ValueError('userId cannot be empty')
+        if len(v) > 255:
+            raise ValueError('userId cannot exceed 255 characters')
+        return v.strip()
+
+
 class DeviceRequest(BaseModel):
     """Validation model for device creation/update requests."""
     
     device: Dict[str, str] = Field(..., description="Device information")
     
-    @validator('device')
+    @field_validator('device')
+    @classmethod
     def validate_device(cls, v):
         """Validate device object structure."""
         if not v:
@@ -182,7 +221,8 @@ class BatchRequest(BaseModel):
     
     batch: List[Dict[str, Any]] = Field(..., description="List of batch requests")
     
-    @validator('batch')
+    @field_validator('batch')
+    @classmethod
     def validate_batch(cls, v):
         """Validate batch request structure."""
         if not v:
@@ -217,21 +257,24 @@ class EcommerceEventProperties(BaseModel):
     quantity: Optional[int] = Field(None, description="Product quantity")
     currency: Optional[str] = Field("USD", description="Currency code")
     
-    @validator('price')
+    @field_validator('price')
+    @classmethod
     def validate_price(cls, v):
         """Validate price is positive."""
         if v is not None and v < 0:
             raise ValueError('Price cannot be negative')
         return v
     
-    @validator('quantity')
+    @field_validator('quantity')
+    @classmethod
     def validate_quantity(cls, v):
         """Validate quantity is positive."""
         if v is not None and v < 0:
             raise ValueError('Quantity cannot be negative')
         return v
     
-    @validator('currency')
+    @field_validator('currency')
+    @classmethod
     def validate_currency(cls, v):
         """Validate currency code format."""
         if v is not None:
@@ -249,14 +292,16 @@ class OrderCompletedProperties(EcommerceEventProperties):
     total: Union[float, int] = Field(..., description="Order total")
     products: Optional[List[Dict[str, Any]]] = Field(None, description="List of products")
     
-    @validator('order_id')
+    @field_validator('order_id')
+    @classmethod
     def validate_order_id(cls, v):
         """Validate order ID is not empty."""
         if not v or len(v.strip()) == 0:
             raise ValueError('Order ID cannot be empty')
         return v.strip()
     
-    @validator('total')
+    @field_validator('total')
+    @classmethod
     def validate_total(cls, v):
         """Validate total is positive."""
         if v < 0:
@@ -269,7 +314,8 @@ class ProductViewedProperties(EcommerceEventProperties):
     
     product_id: str = Field(..., description="Product identifier")
     
-    @validator('product_id')
+    @field_validator('product_id')
+    @classmethod
     def validate_product_id_required(cls, v):
         """Validate product ID is not empty."""
         if not v or len(v.strip()) == 0:
@@ -286,13 +332,17 @@ class EmailEventProperties(BaseModel):
     campaign_id: Optional[str] = Field(None, description="Campaign identifier")
     campaign_name: Optional[str] = Field(None, description="Campaign name")
     
-    @validator('email_address')
+    @field_validator('email_address')
+    @classmethod
     def validate_email_format(cls, v):
         """Validate email address format."""
         if v is not None:
+            # Strip whitespace first, then validate
+            email = v.strip()
             email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-            if not re.match(email_pattern, v):
+            if not re.match(email_pattern, email):
                 raise ValueError('Invalid email address format')
+            return email.lower()
         return v
 
 
@@ -305,7 +355,8 @@ class MobileAppEventProperties(BaseModel):
     device_model: Optional[str] = Field(None, description="Device model")
     platform: Optional[str] = Field(None, description="Platform (iOS/Android)")
     
-    @validator('platform')
+    @field_validator('platform')
+    @classmethod
     def validate_platform(cls, v):
         """Validate platform value."""
         if v is not None:
@@ -324,14 +375,16 @@ class VideoEventProperties(BaseModel):
     position: Optional[int] = Field(None, description="Current position in seconds")
     quality: Optional[str] = Field(None, description="Video quality")
     
-    @validator('video_length')
+    @field_validator('video_length')
+    @classmethod
     def validate_video_length(cls, v):
         """Validate video length is positive."""
         if v is not None and v < 0:
             raise ValueError('Video length cannot be negative')
         return v
     
-    @validator('position')
+    @field_validator('position')
+    @classmethod
     def validate_position(cls, v):
         """Validate position is non-negative."""
         if v is not None and v < 0:
@@ -477,7 +530,8 @@ class CustomerIOConfig(BaseModel):
     MAX_RETRIES: int = 3
     RETRY_BACKOFF_FACTOR: float = 2.0
     
-    @validator('api_key')
+    @field_validator('api_key')
+    @classmethod
     def validate_api_key(cls, v: str) -> str:
         """Validate API key format."""
         if not v or len(v.strip()) == 0:
@@ -486,7 +540,8 @@ class CustomerIOConfig(BaseModel):
             raise ValueError("API key appears to be too short")
         return v.strip()
     
-    @validator('region')
+    @field_validator('region')
+    @classmethod
     def validate_region(cls, v: str) -> str:
         """Validate and normalize region."""
         normalized = v.lower()
@@ -516,7 +571,3 @@ class CustomerIOConfig(BaseModel):
             "Accept": "application/json"
         }
     
-    class Config:
-        """Pydantic model configuration."""
-        validate_assignment = True
-        extra = "forbid"

@@ -42,7 +42,7 @@ except ImportError:
 
 # HTTP and validation libraries
 import httpx
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 # Data generation
 from faker import Faker
@@ -85,7 +85,8 @@ class CustomerIOConfig(BaseModel):
     MAX_RETRIES: int = Field(default=3, description="Maximum retry attempts")
     RETRY_BACKOFF_FACTOR: float = Field(default=2.0, description="Backoff multiplier")
     
-    @validator('api_key')
+    @field_validator('api_key')
+    @classmethod
     def validate_api_key(cls, v: str) -> str:
         """Validate API key format."""
         if not v or len(v.strip()) == 0:
@@ -94,7 +95,8 @@ class CustomerIOConfig(BaseModel):
             raise ValueError("API key appears to be too short")
         return v.strip()
     
-    @validator('region')
+    @field_validator('region')
+    @classmethod
     def validate_region(cls, v: str) -> str:
         """Validate and normalize region."""
         return v.lower()
@@ -118,15 +120,11 @@ class CustomerIOConfig(BaseModel):
             "Accept": "application/json"
         }
     
-    class Config:
-        """Pydantic model configuration."""
-        validate_assignment = True
-        extra = "forbid"
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-@dataclass
-class ValidationResult:
-    """Type-safe validation result."""
     status: ValidationStatus
     component: str
     result: str

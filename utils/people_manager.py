@@ -13,10 +13,11 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 from enum import Enum
 import structlog
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from .api_client import CustomerIOClient
-from .validators import validate_request_size, ValidationError as CIOValidationError
+from .validators import validate_request_size
+from .error_handlers import ValidationError as CIOValidationError
 from .transformers import BatchTransformer
 from .error_handlers import retry_on_error
 
@@ -51,19 +52,22 @@ class UserTraits(BaseModel):
     total_spent: Optional[float] = Field(None, ge=0, description="Total amount spent")
     login_count: Optional[int] = Field(None, ge=0, description="Number of logins")
     
-    @validator('email')
+    @field_validator('email')
+    @classmethod
     def validate_email(cls, v: str) -> str:
         """Validate email format."""
         import re
+        # Strip whitespace first, then validate
+        email = v.strip()
         pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        if not re.match(pattern, v):
+        if not re.match(pattern, email):
             raise ValueError('Invalid email format')
-        return v.lower().strip()
+        return email.lower()
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
 
 class UserIdentification(BaseModel):
@@ -71,9 +75,10 @@ class UserIdentification(BaseModel):
     user_id: Optional[str] = Field(None, description="Unique user identifier")
     anonymous_id: Optional[str] = Field(None, description="Anonymous user identifier")
     traits: UserTraits = Field(..., description="User traits")
-    timestamp: Optional[datetime] = Field(None, description="Identification timestamp")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Identification timestamp")
     
-    @validator('user_id')
+    @field_validator('user_id')
+    @classmethod
     def validate_user_id(cls, v: Optional[str]) -> Optional[str]:
         """Validate user ID format."""
         if v is not None:
@@ -83,22 +88,13 @@ class UserIdentification(BaseModel):
                 raise ValueError('User ID cannot exceed 255 characters')
             return v.strip()
         return v
-    
-    @validator('timestamp', pre=True, always=True)
-    def set_timestamp(cls, v: Optional[datetime]) -> datetime:
-        """Set default timestamp if not provided."""
-        return v or datetime.now(timezone.utc)
 
 
 class UserDeletionRequest(BaseModel):
     """Type-safe user deletion request model."""
     user_id: str = Field(..., description="User ID to delete")
     reason: str = Field("user_request", description="Deletion reason")
-    timestamp: Optional[datetime] = Field(None, description="Deletion timestamp")
-    
-    @validator('timestamp', pre=True, always=True)
-    def set_timestamp(cls, v: Optional[datetime]) -> datetime:
-        return v or datetime.now(timezone.utc)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Deletion timestamp")
 
 
 class PeopleManager:
@@ -126,7 +122,7 @@ class PeopleManager:
         try:
             # Convert Pydantic model to API request
             request_data = {
-                "traits": user.traits.dict(exclude_none=True),
+                "traits": user.traits.model_dump(exclude_none=True),
                 "timestamp": user.timestamp.isoformat()
             }
             
@@ -308,7 +304,7 @@ class PeopleManager:
             for user in users:
                 request = {
                     "type": "identify",
-                    "traits": user.traits.dict(exclude_none=True),
+                    "traits": user.traits.model_dump(exclude_none=True),
                     "timestamp": user.timestamp.isoformat()
                 }
                 

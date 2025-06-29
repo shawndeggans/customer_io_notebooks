@@ -86,7 +86,7 @@ class TestUserTraits:
     
     def test_required_email_field(self):
         """Test that email field is required."""
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             UserTraits()
     
     def test_email_validation_valid_formats(self):
@@ -123,12 +123,12 @@ class TestUserTraits:
     
     def test_negative_total_spent_validation(self):
         """Test validation of negative total_spent."""
-        with pytest.raises(ValidationError, match="ensure this value is greater than or equal to 0"):
+        with pytest.raises(ValidationError, match="Input should be greater than or equal to 0"):
             UserTraits(email="test@example.com", total_spent=-10.0)
     
     def test_negative_login_count_validation(self):
         """Test validation of negative login_count."""
-        with pytest.raises(ValidationError, match="ensure this value is greater than or equal to 0"):
+        with pytest.raises(ValidationError, match="Input should be greater than or equal to 0"):
             UserTraits(email="test@example.com", login_count=-1)
     
     def test_enum_value_conversion(self):
@@ -194,7 +194,7 @@ class TestUserIdentification:
     
     def test_required_traits_field(self):
         """Test that traits field is required."""
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             UserIdentification(user_id="user_123")
     
     def test_user_id_validation_empty(self):
@@ -269,7 +269,7 @@ class TestUserDeletionRequest:
     
     def test_required_user_id_field(self):
         """Test that user_id field is required."""
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             UserDeletionRequest()
     
     def test_automatic_timestamp(self):

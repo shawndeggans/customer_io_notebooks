@@ -14,7 +14,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Any, Union
 from enum import Enum
 import structlog
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 import uuid
 import json
 
@@ -63,10 +63,10 @@ class EventTemplate(BaseModel):
     required_properties: List[str] = Field(default_factory=list, description="Required property names")
     default_properties: Dict[str, Any] = Field(default_factory=dict, description="Default property values")
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
 
 class EventSession(BaseModel):
@@ -78,12 +78,18 @@ class EventSession(BaseModel):
     last_activity: datetime = Field(..., description="Last activity timestamp")
     events_count: int = Field(default=0, description="Number of events in session")
     
-    @validator('session_id')
+    @field_validator('session_id')
+    @classmethod
     def validate_session_id(cls, v: str) -> str:
         """Validate session ID format."""
         if not v or len(v.strip()) == 0:
             raise ValueError("Session ID cannot be empty")
         return v.strip()
+
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
 
 class EventManager:
@@ -217,7 +223,7 @@ class EventManager:
             category=template.category
         )
         
-        return track_request.dict()
+        return track_request.model_dump()
     
     @retry_on_error(max_retries=3, backoff_factor=2.0)
     def send_event(
@@ -249,7 +255,7 @@ class EventManager:
                 raise ValueError("Event size exceeds 32KB limit")
             
             # Send the event
-            response = self.client.track(**track_request.dict())
+            response = self.client.track(**track_request.model_dump())
             
             self.logger.info(
                 "Event sent successfully",
@@ -297,7 +303,7 @@ class EventManager:
                 track_request = TrackRequest(**event)
                 track_requests.append({
                     "type": "track",
-                    **track_request.dict()
+                    **track_request.model_dump()
                 })
             
             # Optimize batch sizes if requested
@@ -385,7 +391,7 @@ class EventManager:
             event_name = event_type.replace("_", " ").title()
         
         # Add additional properties
-        properties_dict = properties.dict(exclude_none=True)
+        properties_dict = properties.model_dump(exclude_none=True)
         properties_dict.update(additional_properties)
         
         return self.create_event(
@@ -565,3 +571,61 @@ class EventManager:
                 "max_retries": self.client.max_retries
             }
         }
+    
+    @retry_on_error(max_retries=3, backoff_factor=2.0)
+    def send_report_delivery_event(
+        self,
+        user_id: str,
+        report_id: str,
+        delivery_method: str,
+        status: str = "delivered",
+        **additional_properties
+    ) -> Dict[str, Any]:
+        """
+        Send a report delivery notification using semantic event.
+        
+        Args:
+            user_id: User receiving the report
+            report_id: Report identifier
+            delivery_method: How the report was delivered (email, download, etc.)
+            status: Delivery status (delivered, failed, pending)
+            **additional_properties: Additional report properties
+            
+        Returns:
+            API response dictionary
+        """
+        
+        try:
+            # Send report delivery as semantic event
+            response = self.client.track(
+                user_id=user_id,
+                event="Report Delivery Event",
+                properties={
+                    "report_id": report_id,
+                    "delivery_method": delivery_method,
+                    "status": status,
+                    "delivered_at": datetime.now(timezone.utc).isoformat(),
+                    **additional_properties
+                },
+                timestamp=datetime.now(timezone.utc)
+            )
+            
+            self.logger.info(
+                "Report delivery event sent successfully",
+                user_id=user_id,
+                report_id=report_id,
+                delivery_method=delivery_method,
+                status=status
+            )
+            
+            return response
+            
+        except Exception as e:
+            self.logger.error(
+                "Failed to send report delivery event",
+                user_id=user_id,
+                report_id=report_id,
+                delivery_method=delivery_method,
+                error=str(e)
+            )
+            raise

@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from enum import Enum
 import structlog
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 import hashlib
 import base64
 import secrets
@@ -87,7 +87,8 @@ class SecretConfig(BaseModel):
     required: bool = Field(default=True, description="Whether secret is required")
     description: Optional[str] = Field(None, description="Secret description")
     
-    @validator('name')
+    @field_validator('name')
+    @classmethod
     def validate_name(cls, v: str) -> str:
         """Validate secret name format."""
         if not v or len(v.strip()) == 0:
@@ -97,13 +98,11 @@ class SecretConfig(BaseModel):
             raise ValueError("Secret name must contain only alphanumeric, underscore, or dash characters")
         return v.strip().upper()
     
-    class Config:
-        """Pydantic model configuration."""
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class EnvironmentConfig(BaseModel):
-    """Type-safe environment configuration model."""
     name: Environment = Field(..., description="Environment name")
     display_name: str = Field(..., description="Human readable name")
     description: Optional[str] = Field(None, description="Environment description")
@@ -118,14 +117,11 @@ class EnvironmentConfig(BaseModel):
     auto_scaling: bool = Field(default=False, description="Enable auto-scaling")
     monitoring_enabled: bool = Field(default=True, description="Enable monitoring")
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class DeploymentConfig(BaseModel):
-    """Type-safe deployment configuration model."""
     deployment_id: str = Field(..., description="Unique deployment identifier")
     name: str = Field(..., description="Deployment name")
     version: str = Field(..., description="Application version")
@@ -140,21 +136,19 @@ class DeploymentConfig(BaseModel):
     created_by: str = Field(..., description="User who created deployment")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
-    @validator('deployment_id', 'name')
+    @field_validator('deployment_id', 'name')
+    @classmethod
     def validate_identifiers(cls, v: str) -> str:
         """Validate identifier formats."""
         if not v or len(v.strip()) == 0:
             raise ValueError("Identifier cannot be empty")
         return v.strip()
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class DeploymentResult(BaseModel):
-    """Type-safe deployment result model."""
     deployment_id: str = Field(..., description="Deployment identifier")
     status: DeploymentStatus = Field(..., description="Deployment status")
     start_time: datetime = Field(..., description="Deployment start time")
@@ -184,14 +178,11 @@ class DeploymentResult(BaseModel):
         """Check if deployment was successful."""
         return self.status == DeploymentStatus.SUCCESS
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class InfrastructureTemplate(BaseModel):
-    """Type-safe infrastructure template model."""
     template_id: str = Field(..., description="Template identifier")
     name: str = Field(..., description="Template name")
     provider: InfrastructureProvider = Field(..., description="Infrastructure provider")
@@ -202,14 +193,11 @@ class InfrastructureTemplate(BaseModel):
     version: str = Field(default="1.0.0", description="Template version")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class ConfigurationManager:
-    """Secure configuration and secrets management system."""
     
     def __init__(self):
         self.environments: Dict[Environment, EnvironmentConfig] = {}

@@ -15,7 +15,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Any, Union
 from enum import Enum
 import structlog
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from .api_client import CustomerIOClient
 from .error_handlers import retry_on_error, ErrorContext, CustomerIOError, NetworkError, RateLimitError
@@ -55,7 +55,8 @@ class AuthenticationConfig(BaseModel):
     enable_metrics: bool = Field(default=True, description="Enable metrics collection")
     validate_ssl: bool = Field(default=True, description="Validate SSL certificates")
     
-    @validator('api_key')
+    @field_validator('api_key')
+    @classmethod
     def validate_api_key(cls, v: str) -> str:
         """Validate API key format."""
         if not v or len(v.strip()) == 0:
@@ -64,7 +65,8 @@ class AuthenticationConfig(BaseModel):
             raise ValueError("API key appears to be invalid")
         return v.strip()
     
-    @validator('region')
+    @field_validator('region')
+    @classmethod
     def validate_region(cls, v: str) -> str:
         """Validate region selection."""
         valid_regions = ["us", "eu"]
@@ -72,14 +74,11 @@ class AuthenticationConfig(BaseModel):
             raise ValueError(f"Region must be one of: {valid_regions}")
         return v.lower()
     
-    class Config:
-        """Pydantic model configuration."""
-        validate_assignment = True
-        extra = "forbid"
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class ConnectionMetrics(BaseModel):
-    """Connection metrics and statistics."""
     
     total_requests: int = Field(default=0, description="Total API requests made")
     successful_requests: int = Field(default=0, description="Successful requests")
@@ -96,13 +95,11 @@ class ConnectionMetrics(BaseModel):
     connection_established: Optional[datetime] = Field(None, description="Connection established time")
     uptime_seconds: float = Field(default=0.0, description="Connection uptime in seconds")
     
-    class Config:
-        """Pydantic model configuration."""
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class HealthCheckResult(BaseModel):
-    """Health check result model."""
     
     status: ConnectionStatus = Field(..., description="Overall connection status")
     is_healthy: bool = Field(..., description="Whether connection is healthy")
@@ -117,13 +114,11 @@ class HealthCheckResult(BaseModel):
     
     checked_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
-    class Config:
-        """Pydantic model configuration."""
-        validate_assignment = True
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class AuthenticationManager:
-    """
     Comprehensive authentication and connection management for Customer.IO API.
     
     Features:
@@ -397,7 +392,7 @@ class AuthenticationManager:
         Returns:
             Comprehensive metrics dictionary
         """
-        metrics_dict = self.metrics.dict()
+        metrics_dict = self.metrics.model_dump()
         
         # Add calculated metrics
         if self.metrics.total_requests > 0:
@@ -414,7 +409,7 @@ class AuthenticationManager:
         # Add current status
         metrics_dict["connection_status"] = self._connection_status.value
         metrics_dict["last_health_check"] = (
-            self._last_health_check.dict() if self._last_health_check else None
+            self._last_health_check.model_dump() if self._last_health_check else None
         )
         
         # Add rate limit status

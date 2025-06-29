@@ -18,7 +18,7 @@ from collections import defaultdict, Counter
 from decimal import Decimal, ROUND_HALF_UP
 import statistics
 import structlog
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from .api_client import CustomerIOClient
 from .event_manager import EventManager
@@ -110,31 +110,27 @@ class Product(BaseModel):
     reviews_count: Optional[int] = Field(None, ge=0, description="Number of reviews")
     tags: List[str] = Field(default_factory=list, description="Product tags")
     
-    @validator('product_id')
+    @field_validator('product_id')
+    @classmethod
     def validate_product_id(cls, v: str) -> str:
         """Validate product ID format."""
         if not v or len(v.strip()) == 0:
             raise ValueError("Product ID cannot be empty")
         return v.strip()
     
-    @validator('currency')
+    @field_validator('currency')
+    @classmethod
     def validate_currency(cls, v: str) -> str:
         """Validate currency format."""
         if len(v) != 3 or not v.isupper():
             raise ValueError("Currency must be 3-letter uppercase code (e.g., USD)")
         return v
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
-        json_encoders = {
-            Decimal: lambda v: float(v)
-        }
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class CartItem(BaseModel):
-    """Type-safe cart item model."""
     product_id: str = Field(..., description="Product identifier")
     variant_id: Optional[str] = Field(None, description="Product variant identifier")
     quantity: int = Field(..., gt=0, description="Item quantity")
@@ -146,7 +142,8 @@ class CartItem(BaseModel):
     added_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
     
-    @validator('total_price')
+    @field_validator('total_price')
+    @classmethod
     def validate_total_price(cls, v: Decimal, values: Dict) -> Decimal:
         """Validate total price calculation."""
         if 'quantity' in values and 'unit_price' in values:
@@ -155,16 +152,11 @@ class CartItem(BaseModel):
                 raise ValueError(f"Total price {v} doesn't match calculation {expected_total}")
         return v
     
-    class Config:
-        """Pydantic model configuration."""
-        validate_assignment = True
-        json_encoders = {
-            Decimal: lambda v: float(v)
-        }
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class ShoppingCart(BaseModel):
-    """Type-safe shopping cart model."""
     cart_id: str = Field(..., description="Unique cart identifier")
     user_id: str = Field(..., description="User identifier")
     session_id: Optional[str] = Field(None, description="Session identifier")
@@ -179,7 +171,8 @@ class ShoppingCart(BaseModel):
     updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
     abandoned_at: Optional[datetime] = Field(None, description="Abandonment timestamp")
     
-    @validator('cart_id', 'user_id')
+    @field_validator('cart_id', 'user_id')
+    @classmethod
     def validate_ids(cls, v: str) -> str:
         """Validate ID formats."""
         if not v or len(v.strip()) == 0:
@@ -226,16 +219,11 @@ class ShoppingCart(BaseModel):
         """Get total number of items in cart."""
         return sum(item.quantity for item in self.items)
     
-    class Config:
-        """Pydantic model configuration."""
-        validate_assignment = True
-        json_encoders = {
-            Decimal: lambda v: float(v)
-        }
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class Order(BaseModel):
-    """Type-safe order model."""
     order_id: str = Field(..., description="Unique order identifier")
     customer_id: str = Field(..., description="Customer identifier")
     cart_id: Optional[str] = Field(None, description="Source cart identifier")
@@ -256,21 +244,24 @@ class Order(BaseModel):
     updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
     completed_at: Optional[datetime] = Field(None, description="Completion timestamp")
     
-    @validator('order_id', 'customer_id')
+    @field_validator('order_id', 'customer_id')
+    @classmethod
     def validate_ids(cls, v: str) -> str:
         """Validate ID formats."""
         if not v or len(v.strip()) == 0:
             raise ValueError("ID cannot be empty")
         return v.strip()
     
-    @validator('items')
+    @field_validator('items')
+    @classmethod
     def validate_items(cls, v: List[CartItem]) -> List[CartItem]:
         """Validate order has items."""
         if not v or len(v) == 0:
             raise ValueError("Order must have at least one item")
         return v
     
-    @validator('total_amount')
+    @field_validator('total_amount')
+    @classmethod
     def validate_total_amount(cls, v: Decimal, values: Dict) -> Decimal:
         """Validate total amount calculation."""
         if all(field in values for field in ['subtotal', 'tax_amount', 'shipping_amount', 'discount_amount']):
@@ -293,17 +284,11 @@ class Order(BaseModel):
         # This would typically be enriched with product data
         return set()
     
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        validate_assignment = True
-        json_encoders = {
-            Decimal: lambda v: float(v)
-        }
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True
+    }
 
-
-class EcommerceManager:
-    """Type-safe ecommerce event tracking operations."""
     
     def __init__(self, client: CustomerIOClient, event_manager: Optional[EventManager] = None):
         self.client = client

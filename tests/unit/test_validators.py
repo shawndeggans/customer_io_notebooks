@@ -372,7 +372,7 @@ class TestDeviceRequest:
         """Test device fails with empty device info."""
         data = {"device": {}}
         
-        with pytest.raises(ValidationError, match="Device token is required"):
+        with pytest.raises(ValidationError, match="Device information is required"):
             DeviceRequest(**data)
     
     def test_device_missing_token(self):

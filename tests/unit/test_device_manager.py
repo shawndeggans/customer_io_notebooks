@@ -109,12 +109,12 @@ class TestDeviceInfo:
     
     def test_required_token_field(self):
         """Test that token field is required."""
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             DeviceInfo(type=DeviceType.IOS)
     
     def test_required_type_field(self):
         """Test that type field is required."""
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             DeviceInfo(token="valid_token_123456789")
     
     def test_empty_token_validation(self):
@@ -190,20 +190,20 @@ class TestDeviceAttributes:
     
     def test_battery_level_validation_high(self):
         """Test validation of battery level too high."""
-        with pytest.raises(ValidationError, match="ensure this value is less than or equal to 1"):
+        with pytest.raises(ValidationError, match="Input should be less than or equal to 1"):
             DeviceAttributes(battery_level=1.5)
     
     def test_battery_level_validation_low(self):
         """Test validation of battery level too low."""
-        with pytest.raises(ValidationError, match="ensure this value is greater than or equal to 0"):
+        with pytest.raises(ValidationError, match="Input should be greater than or equal to 0"):
             DeviceAttributes(battery_level=-0.1)
     
     def test_screen_dimension_validation(self):
         """Test validation of negative screen dimensions."""
-        with pytest.raises(ValidationError, match="ensure this value is greater than or equal to 0"):
+        with pytest.raises(ValidationError, match="Input should be greater than or equal to 0"):
             DeviceAttributes(screen_width=-100)
         
-        with pytest.raises(ValidationError, match="ensure this value is greater than or equal to 0"):
+        with pytest.raises(ValidationError, match="Input should be greater than or equal to 0"):
             DeviceAttributes(screen_height=-100)
     
     def test_timezone_validation_invalid(self):
@@ -278,12 +278,12 @@ class TestDeviceRegistration:
         """Test that user_id field is required."""
         device_info = DeviceInfo(token="valid_token_123456789", type=DeviceType.IOS)
         
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             DeviceRegistration(device_info=device_info)
     
     def test_required_device_info_field(self):
         """Test that device_info field is required."""
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             DeviceRegistration(user_id="user_123")
     
     def test_empty_user_id_validation(self):

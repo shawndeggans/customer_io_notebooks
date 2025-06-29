@@ -115,7 +115,7 @@ class TestJourneyStep:
     
     def test_required_fields(self):
         """Test that required fields are validated."""
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             JourneyStep()
     
     def test_step_id_validation_empty(self):
@@ -144,7 +144,7 @@ class TestJourneyStep:
         """Test validation of negative duration."""
         now = datetime.now(timezone.utc)
         
-        with pytest.raises(ValidationError, match="ensure this value is greater than or equal to 0"):
+        with pytest.raises(ValidationError, match="Input should be greater than or equal to 0"):
             JourneyStep(
                 step_id="test",
                 event="Test Event",
@@ -198,7 +198,7 @@ class TestUserJourney:
     
     def test_required_fields(self):
         """Test that required fields are validated."""
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             UserJourney()
     
     def test_id_validation_empty(self):
@@ -349,12 +349,12 @@ class TestFunnelStep:
     
     def test_required_fields(self):
         """Test that required fields are validated."""
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             FunnelStep()
     
     def test_step_order_validation(self):
         """Test step order must be positive."""
-        with pytest.raises(ValidationError, match="ensure this value is greater than or equal to 1"):
+        with pytest.raises(ValidationError, match="Input should be greater than or equal to 1"):
             FunnelStep(
                 step_name="Test Step",
                 step_order=0,
@@ -363,7 +363,7 @@ class TestFunnelStep:
     
     def test_time_window_validation(self):
         """Test time window must be positive."""
-        with pytest.raises(ValidationError, match="ensure this value is greater than or equal to 1"):
+        with pytest.raises(ValidationError, match="Input should be greater than or equal to 1"):
             FunnelStep(
                 step_name="Test Step",
                 step_order=1,
@@ -418,7 +418,7 @@ class TestConversionFunnel:
     
     def test_required_fields(self):
         """Test that required fields are validated."""
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             ConversionFunnel()
     
     def test_default_attribution_model(self):
@@ -526,7 +526,7 @@ class TestConversionFunnel:
         ]
         
         # Too small
-        with pytest.raises(ValidationError, match="ensure this value is greater than or equal to 1"):
+        with pytest.raises(ValidationError, match="Input should be greater than or equal to 1"):
             ConversionFunnel(
                 funnel_id="funnel_123",
                 funnel_name="Test Funnel",
@@ -536,7 +536,7 @@ class TestConversionFunnel:
             )
         
         # Too large
-        with pytest.raises(ValidationError, match="ensure this value is less than or equal to 365"):
+        with pytest.raises(ValidationError, match="Input should be less than or equal to 365"):
             ConversionFunnel(
                 funnel_id="funnel_123",
                 funnel_name="Test Funnel",
@@ -579,7 +579,7 @@ class TestAttributionTouchpoint:
     
     def test_required_fields(self):
         """Test that required fields are validated."""
-        with pytest.raises(ValidationError, match="field required"):
+        with pytest.raises(ValidationError, match="Field required"):
             AttributionTouchpoint()
     
     def test_required_field_validation_empty(self):
@@ -633,7 +633,7 @@ class TestAttributionTouchpoint:
         """Test position in journey must be positive."""
         now = datetime.now(timezone.utc)
         
-        with pytest.raises(ValidationError, match="ensure this value is greater than or equal to 1"):
+        with pytest.raises(ValidationError, match="Input should be greater than or equal to 1"):
             AttributionTouchpoint(
                 touchpoint_id="tp_123",
                 user_id="user_456",
@@ -646,7 +646,7 @@ class TestAttributionTouchpoint:
         """Test conversion value must be non-negative."""
         now = datetime.now(timezone.utc)
         
-        with pytest.raises(ValidationError, match="ensure this value is greater than or equal to 0"):
+        with pytest.raises(ValidationError, match="Input should be greater than or equal to 0"):
             AttributionTouchpoint(
                 touchpoint_id="tp_123",
                 user_id="user_456",
