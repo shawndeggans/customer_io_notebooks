@@ -108,8 +108,12 @@ def delete_user(client: CustomerIOClient, user_id: str) -> Dict[str, Any]:
     # Validate inputs
     validate_user_id(user_id)
     
-    data = {"userId": user_id}
-    return client.make_request("DELETE", "/identify", data)
+    # Use semantic event to delete user
+    data = {
+        "userId": user_id,
+        "event": "User Deleted"
+    }
+    return client.make_request("POST", "/track", data)
 
 
 def suppress_user(client: CustomerIOClient, user_id: str) -> Dict[str, Any]:

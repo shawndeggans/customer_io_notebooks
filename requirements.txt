@@ -37,3 +37,6 @@ faker>=24.0.0
 # Development dependencies
 jupyter>=1.0.0
 jupyterlab>=4.0.0
+
+# Environment configuration
+python-dotenv>=1.0.0
