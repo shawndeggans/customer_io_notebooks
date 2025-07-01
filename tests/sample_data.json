@@ -1,0 +1,59 @@
+{
+  "customers": [
+    {
+      "customer_id": "customer_001",
+      "user_id": "user_001", 
+      "email": "john.doe@example.com",
+      "traits": {
+        "first_name": "John",
+        "last_name": "Doe",
+        "plan": "premium",
+        "created_at": "2024-01-15T10:30:00Z"
+      },
+      "is_active": true,
+      "region": "us"
+    },
+    {
+      "customer_id": "customer_002",
+      "user_id": "user_002",
+      "email": "jane.smith@example.com", 
+      "traits": {
+        "first_name": "Jane",
+        "last_name": "Smith",
+        "plan": "basic",
+        "created_at": "2024-02-20T14:45:00Z"
+      },
+      "is_active": false,
+      "region": "eu"
+    }
+  ],
+  "events": [
+    {
+      "event_id": "event_001",
+      "customer_id": "customer_001",
+      "user_id": "user_001",
+      "event_name": "Product Viewed",
+      "timestamp": "2024-03-10T16:20:00Z",
+      "properties": {
+        "product_id": "prod_123",
+        "product_name": "Test Product",
+        "price": "29.99",
+        "category": "electronics"
+      },
+      "event_category": "ecommerce"
+    },
+    {
+      "event_id": "event_002",
+      "customer_id": "customer_002", 
+      "user_id": "user_002",
+      "event_name": "Page Viewed",
+      "timestamp": "2024-03-11T09:15:00Z",
+      "properties": {
+        "page_name": "Home",
+        "url": "https://example.com",
+        "referrer": "https://google.com"
+      },
+      "event_category": "engagement"
+    }
+  ]
+}

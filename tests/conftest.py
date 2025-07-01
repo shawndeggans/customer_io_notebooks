@@ -5,13 +5,9 @@ Provides common fixtures for testing utils modules without requiring
 actual Spark sessions or API credentials.
 """
 
-import json
 import pytest
 from datetime import datetime, timezone
-from typing import Dict, Any, List
-from unittest.mock import Mock, MagicMock
-import tempfile
-import os
+from unittest.mock import Mock
 
 # Mock Spark session for testing without actual Databricks environment
 @pytest.fixture
