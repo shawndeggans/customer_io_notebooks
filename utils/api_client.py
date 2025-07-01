@@ -3,6 +3,7 @@ Customer.IO Data Pipelines API client.
 """
 
 import time
+import base64
 from dataclasses import dataclass
 from typing import Dict, Any, Optional
 import httpx
@@ -98,8 +99,10 @@ class CustomerIOClient:
         dict
             Headers including authorization and content type
         """
+        # Customer.IO uses Basic auth with API key as username and empty password
+        credentials = base64.b64encode(f"{self.api_key}:".encode()).decode()
         return {
-            "Authorization": f"Bearer {self.api_key}",
+            "Authorization": f"Basic {credentials}",
             "Content-Type": "application/json",
             "User-Agent": "customerio-python-client/1.0.0"
         }

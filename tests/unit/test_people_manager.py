@@ -171,9 +171,9 @@ class TestDeleteUser:
         )
         
         mock_client.make_request.assert_called_once_with(
-            "DELETE",
-            "/identify",
-            {"userId": "user123"}
+            "POST",
+            "/track",
+            {"userId": "user123", "event": "User Deleted"}
         )
         assert result == {"status": "success"}
     

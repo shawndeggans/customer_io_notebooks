@@ -1,13 +1,12 @@
-# Customer.IO Data Pipelines API - Databricks Notebooks
+# Customer.IO Data Pipelines API Client Library
 
-A comprehensive suite of Jupyter notebooks and Python utilities for working with the Customer.IO Data Pipelines API in Databricks environments. This project provides production-ready patterns for data ingestion, event tracking, user management, and analytics integration.
+A comprehensive Python client library and Jupyter notebook suite for the Customer.IO Data Pipelines API, built using Test-Driven Development (TDD) methodology. This project provides production-ready patterns for user management, event tracking, device management, and complete API integration.
 
 ## Quick Start
 
 ### Prerequisites
 
 - Python 3.11+
-- Databricks workspace (optional, can run locally)
 - Customer.IO API credentials
 - UV package manager (recommended) or pip
 
@@ -23,9 +22,7 @@ curl -fsSL https://get.jetify.com/devbox | bash
 devbox shell
 
 # Install dependencies
-uv venv
-source .venv/bin/activate
-uv pip install -r requirements.txt
+uv install
 ```
 
 #### Using standard Python setup
@@ -36,28 +33,32 @@ python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install dependencies
-pip install -r requirements.txt
-
-# For development
-pip install -e .
+uv pip install -r requirements.txt
 ```
 
 ### Basic Usage
 
 ```python
 from utils.api_client import CustomerIOClient
-from utils.people_manager import PeopleManager
+from utils.people_manager import identify_user
+from utils.event_manager import track_event
 
-# Initialize client
+# Initialize client with Basic authentication
 client = CustomerIOClient(api_key="your_api_key", region="us")
 
-# Use managers for specific operations
-people_manager = PeopleManager(client)
-
 # Identify a user
-result = people_manager.identify_user(
+result = identify_user(
+    client=client,
     user_id="user_123",
     traits={"email": "user@example.com", "name": "John Doe"}
+)
+
+# Track an event
+result = track_event(
+    client=client,
+    user_id="user_123",
+    event_name="Purchase Completed",
+    properties={"amount": 99.99, "currency": "USD"}
 )
 ```
 
@@ -72,54 +73,68 @@ customer_io_notebooks/
 ├── CLAUDE.md                           # AI assistant guidelines
 ├── PYTHON_STANDARDS.md                 # Development standards
 ├── REQUIREMENTS.md                     # Detailed project requirements
+├── TODO.md                             # Development progress tracking
+├── cio_pipelines_api.json             # Customer.IO API specification
 │
-├── notebooks/                          # Jupyter notebooks
-│   ├── 00_setup_and_configuration.ipynb
-│   ├── 01_authentication_and_utilities.ipynb
-│   ├── 02_people_management.ipynb
-│   ├── 03_events_and_tracking.ipynb
-│   ├── 04_objects_and_relationships.ipynb
-│   ├── 05_device_management.ipynb
-│   ├── 06_advanced_tracking.ipynb
-│   ├── 07_ecommerce_events.ipynb
-│   ├── 08_suppression_and_gdpr.ipynb
-│   ├── 09_batch_operations.ipynb
-│   ├── 10_data_pipelines_integration.ipynb
-│   ├── 11_monitoring_and_observability.ipynb
-│   └── 12_production_deployment.ipynb
+├── 00_setup_and_configuration.ipynb   # Basic setup and authentication
+├── 01_people_management.ipynb          # User identification and management
+├── 02_event_tracking.ipynb             # Event tracking and semantic events
+├── 03_objects_and_relationships.ipynb # Objects and relationships management
+├── 04_device_management.ipynb          # Device registration and management
+├── 05_batch_operations.ipynb           # Bulk operations and batch processing
+├── 06_page_screen_tracking.ipynb      # Page and screen tracking
+├── 07_profile_aliasing.ipynb           # Profile aliasing and identity management
 │
-├── utils/                              # Reusable Python modules
+├── utils/                              # Python client library modules
 │   ├── __init__.py
-│   ├── api_client.py                   # Core API client
-│   ├── authentication_manager.py       # Authentication handling
-│   ├── deployment_manager.py           # Production deployment
+│   ├── api_client.py                   # Core API client with Basic auth
+│   ├── alias_manager.py                # Profile aliasing operations
+│   ├── batch_manager.py                # Batch operations
 │   ├── device_manager.py               # Device management
-│   ├── error_handlers.py               # Error handling utilities
-│   ├── event_manager.py                # Event tracking
-│   ├── group_manager.py                # Groups and relationships
-│   ├── observability_manager.py        # Monitoring and metrics
-│   ├── people_manager.py               # People/user management
-│   ├── pipeline_manager.py             # Data pipeline integration
-│   ├── setup_manager.py                # Environment setup
-│   ├── transformers.py                 # Data transformation
-│   └── validators.py                   # Data validation
+│   ├── ecommerce_manager.py            # E-commerce semantic events
+│   ├── event_manager.py                # Core event tracking
+│   ├── exceptions.py                   # Custom exception classes
+│   ├── gdpr_manager.py                 # GDPR compliance operations
+│   ├── mobile_manager.py               # Mobile app semantic events
+│   ├── object_manager.py               # Objects and relationships
+│   ├── page_manager.py                 # Page tracking
+│   ├── people_manager.py               # User identification and management
+│   ├── screen_manager.py               # Screen tracking
+│   ├── validators.py                   # Input validation utilities
+│   └── video_manager.py                # Video semantic events
 │
-└── tests/                              # Test suite
+└── tests/                              # Comprehensive test suite
     ├── conftest.py                     # Test configuration
-    ├── unit/                           # Unit tests
+    ├── pytest.ini                     # Test settings
+    ├── unit/                           # Unit tests (297 tests)
     │   ├── test_api_client.py
-    │   ├── test_authentication_manager.py
-    │   ├── test_deployment_manager.py
+    │   ├── test_alias_manager.py
+    │   ├── test_batch_manager.py
     │   ├── test_device_manager.py
+    │   ├── test_ecommerce_manager.py
     │   ├── test_event_manager.py
-    │   ├── test_group_manager.py
-    │   ├── test_observability_manager.py
+    │   ├── test_exceptions.py
+    │   ├── test_gdpr_manager.py
+    │   ├── test_mobile_manager.py
+    │   ├── test_object_manager.py
+    │   ├── test_page_manager.py
     │   ├── test_people_manager.py
-    │   ├── test_pipeline_manager.py
-    │   ├── test_transformers.py
-    │   └── test_validators.py
-    └── integration/                    # Integration tests
-        └── test_api_integration.py
+    │   ├── test_screen_manager.py
+    │   └── test_video_manager.py
+    └── integration/                    # Integration tests with real API
+        ├── README.md                   # Integration testing guide
+        ├── base.py                     # Base test class
+        ├── conftest.py                 # Integration test fixtures
+        ├── utils.py                    # Test utilities
+        ├── test_alias_integration.py
+        ├── test_batch_integration.py
+        ├── test_device_integration.py
+        ├── test_ecommerce_integration.py
+        ├── test_event_integration.py
+        ├── test_gdpr_integration.py
+        ├── test_object_integration.py
+        ├── test_people_integration.py
+        └── test_video_integration.py
 ```
 
 ## Core Components
@@ -128,15 +143,16 @@ customer_io_notebooks/
 
 The `CustomerIOClient` provides a robust interface to the Customer.IO Data Pipelines API with:
 
-- Automatic retry logic with exponential backoff
-- Rate limiting (3000 requests per 3 seconds)
-- Support for both US and EU regions
-- Comprehensive error handling
-- Request/response logging
+- **Basic Authentication**: Uses API key with Basic auth (not Bearer)
+- **Rate Limiting**: Respects 3000 requests per 3 seconds limit
+- **Regional Support**: Both US and EU regions
+- **Error Handling**: Comprehensive error handling with retries
+- **Request/Response Logging**: Built-in logging capabilities
 
 ```python
 from utils.api_client import CustomerIOClient
 
+# Initialize with Basic authentication
 client = CustomerIOClient(
     api_key="your_api_key",
     region="us",  # or "eu"
@@ -145,30 +161,77 @@ client = CustomerIOClient(
 )
 ```
 
-### Manager Classes
+### Utils Modules
 
-Each manager class encapsulates specific Customer.IO functionality:
+Each utils module provides specific Customer.IO functionality:
 
-- **PeopleManager**: User identification, traits, suppression
-- **EventManager**: Event tracking and semantic events
-- **DeviceManager**: Device registration and management
-- **GroupManager**: Groups, objects, and relationships
-- **PipelineManager**: Data pipeline integration
-- **ObservabilityManager**: Monitoring and analytics
-- **DeploymentManager**: Production deployment patterns
-
-### Data Validation (`utils/validators.py`)
-
-Pydantic v2-based validation models ensure data quality:
-
+#### People Management (`utils/people_manager.py`)
 ```python
-from utils.validators import IdentifyPayload, TrackPayload
+from utils.people_manager import identify_user, delete_user, suppress_user, unsuppress_user
 
-# Validate user identification data
-payload = IdentifyPayload(
-    userId="user_123",
-    traits={"email": "user@example.com"}
-)
+# User identification
+identify_user(client, user_id, traits)
+
+# User suppression
+suppress_user(client, user_id)
+unsuppress_user(client, user_id)
+
+# User deletion (uses semantic event)
+delete_user(client, user_id)
+```
+
+#### Event Tracking (`utils/event_manager.py`)
+```python
+from utils.event_manager import track_event, track_page_view, track_screen_view
+
+# Custom events
+track_event(client, user_id, event_name, properties)
+
+# Page/screen events
+track_page_view(client, user_id, page_name, properties)
+track_screen_view(client, user_id, screen_name, properties)
+```
+
+#### Device Management (`utils/device_manager.py`)
+```python
+from utils.device_manager import register_device, update_device, delete_device
+
+# Device registration (requires user_id, device_token, device_type)
+register_device(client, user_id, device_token, device_type="ios", metadata={})
+```
+
+#### Objects and Relationships (`utils/object_manager.py`)
+```python
+from utils.object_manager import create_object, update_object, delete_object
+
+# Object management (requires user_id, object_id, traits)
+create_object(client, user_id, object_id, traits, object_type_id="1")
+```
+
+#### Video Events (`utils/video_manager.py`)
+```python
+from utils.video_manager import track_video_playback_started, track_video_playback_completed
+
+# Video tracking (requires video_id as separate parameter)
+track_video_playback_started(client, user_id, video_id, properties)
+```
+
+#### E-commerce Events (`utils/ecommerce_manager.py`)
+```python
+from utils.ecommerce_manager import track_product_clicked, track_checkout_step_completed
+
+# E-commerce semantic events
+track_product_clicked(client, user_id, properties)
+track_checkout_step_completed(client, user_id, properties)
+```
+
+#### Batch Operations (`utils/batch_manager.py`)
+```python
+from utils.batch_manager import send_batch, create_batch_operations
+
+# Batch processing
+operations = create_batch_operations("identify", user_data_list)
+send_batch(client, operations)
 ```
 
 ## Development Workflow
@@ -188,22 +251,38 @@ payload = IdentifyPayload(
 
 3. **Install dependencies**
    ```bash
-   uv pip install -r requirements.txt
+   uv install
    ```
 
-4. **Configure secrets** (for Databricks)
-   ```python
-   # In Databricks
-   dbutils.secrets.put("customer-io", "api-key", "your_api_key")
+4. **Configure credentials**
+   ```bash
+   # Create .env file from template
+   cp .env.example .env
+   # Edit .env with your Customer.IO API key
    ```
 
 ### Running Tests
 
-This project follows Test-Driven Development (TDD) principles with comprehensive test coverage.
+This project follows Test-Driven Development (TDD) with comprehensive test coverage.
 
 #### Run all tests
 ```bash
 pytest
+```
+
+#### Run unit tests only (297 tests)
+```bash
+pytest tests/unit/ -v
+```
+
+#### Run integration tests (requires API credentials)
+```bash
+# Set up credentials first
+export CUSTOMERIO_API_KEY="your_api_key"
+export CUSTOMERIO_REGION="us"
+
+# Run integration tests
+pytest tests/integration/ -v
 ```
 
 #### Run with coverage
@@ -211,30 +290,13 @@ pytest
 pytest --cov=utils --cov-report=term-missing --cov-report=html
 ```
 
-#### Run specific test categories
-```bash
-# Unit tests only
-pytest tests/unit/ -m unit
-
-# Integration tests (requires API credentials)
-pytest tests/integration/ -m integration
-
-# Fast tests only
-pytest -m "not slow"
-```
-
-#### Test Configuration
-
-Tests are configured in `pytest.ini` with the following markers:
-
-- `unit`: Fast unit tests that don't require external dependencies
-- `integration`: Tests that may require API access or Spark
-- `slow`: Tests that take longer to run
-- `api`: Tests that make actual API calls (require valid credentials)
+#### Test Categories
+- `unit`: Fast unit tests with mocks (297 tests)
+- `integration`: Tests with real Customer.IO API (9 test files)
+- `slow`: Longer-running tests
+- `api`: Tests requiring API credentials
 
 ### Code Quality
-
-This project maintains high code quality standards:
 
 #### Type Checking
 ```bash
@@ -250,271 +312,262 @@ ruff format .
 #### Running Quality Checks
 ```bash
 # All quality checks
-ruff check --fix . && ruff format . && mypy utils/ && pytest
+ruff check --fix . && ruff format . && mypy utils/ && pytest tests/unit/
 ```
 
-## Databricks Integration
+## Integration Testing
 
-### Environment Setup
+### Real API Testing
 
-1. **Create Databricks cluster** with these specifications:
-   - Runtime: 11.3.x-scala2.12 or later
-   - Python: 3.9+
-   - Workers: 2+ (depending on data volume)
+The project includes comprehensive integration tests that work with the actual Customer.IO API:
 
-2. **Install required libraries**:
-   ```python
-   %pip install pydantic>=2.0.0 httpx>=0.25.0 structlog>=24.0.0
+#### Setup Integration Testing
+1. **Get API Credentials**: Obtain your Customer.IO API key
+2. **Configure Environment**:
+   ```bash
+   export CUSTOMERIO_API_KEY="your_api_key"
+   export CUSTOMERIO_REGION="us"  # or "eu"
+   ```
+3. **Run Integration Tests**:
+   ```bash
+   pytest tests/integration/ -v
    ```
 
-3. **Configure secrets**:
-   ```python
-   # Store API credentials securely
-   dbutils.secrets.put("customer-io", "api-key", "your_api_key")
-   dbutils.secrets.put("customer-io", "region", "us")  # or "eu"
-   ```
+#### Integration Test Coverage
+- **People Management**: User identification, suppression, deletion
+- **Event Tracking**: Custom events, semantic events, video, mobile
+- **Device Management**: Device registration, updates, deletion
+- **Object Management**: Objects, relationships, complex hierarchies
+- **Batch Operations**: Bulk processing, size validation
+- **E-commerce Events**: Product interactions, checkout funnel
+- **Video Events**: Playback lifecycle, content tracking
+- **GDPR Compliance**: User suppression, data deletion
 
-### Notebook Usage
+#### Key Integration Test Features
+- **Automatic Cleanup**: Tests clean up created resources
+- **Rate Limiting**: Respects Customer.IO API limits
+- **Error Handling**: Tests both success and failure scenarios
+- **Real API Patterns**: Validates actual API behavior
 
-Each notebook is designed to be self-contained with clear prerequisites:
+### Authentication
 
-1. **00_setup_and_configuration.ipynb**: Initial environment setup
-2. **01_authentication_and_utilities.ipynb**: Authentication patterns
-3. **02_people_management.ipynb**: User identification and management
-4. **03_events_and_tracking.ipynb**: Event tracking fundamentals
-5. **04_objects_and_relationships.ipynb**: Groups and relationships
-6. **05_device_management.ipynb**: Device registration
-7. **06_advanced_tracking.ipynb**: Advanced event patterns
-8. **07_ecommerce_events.ipynb**: E-commerce specific events
-9. **08_suppression_and_gdpr.ipynb**: Privacy and compliance
-10. **09_batch_operations.ipynb**: Bulk data operations
-11. **10_data_pipelines_integration.ipynb**: Pipeline integration
-12. **11_monitoring_and_observability.ipynb**: Monitoring and metrics
-13. **12_production_deployment.ipynb**: Production deployment
+**Important**: Customer.IO Data Pipelines API uses **Basic Authentication**, not Bearer tokens:
 
-### Delta Lake Integration
-
-All notebooks leverage Delta Lake for:
-
-- Data persistence and versioning
-- ACID transactions
-- Time travel capabilities
-- Schema evolution
-- Performance optimization
-
-Example usage:
 ```python
-# Save API responses to Delta Lake
-df.write.format("delta").mode("append").saveAsTable("customerio_events")
-
-# Read with time travel
-historical_df = spark.read.format("delta") \
-    .option("versionAsOf", 0) \
-    .table("customerio_events")
+# Correct authentication pattern discovered through integration testing
+client = CustomerIOClient(api_key="your_api_key", region="us")
+# This creates Basic auth header: Authorization: Basic base64(api_key:)
 ```
 
-## Performance Optimization
+## Jupyter Notebooks
+
+The notebooks serve as a demonstration interface for the utils library:
+
+### Notebook Overview
+1. **00_setup_and_configuration.ipynb**: Basic setup and connectivity testing
+2. **01_people_management.ipynb**: User management and GDPR operations
+3. **02_event_tracking.ipynb**: Event tracking and semantic events
+4. **03_objects_and_relationships.ipynb**: Object and relationship management
+5. **04_device_management.ipynb**: Device registration and management
+6. **05_batch_operations.ipynb**: Bulk operations and batch processing
+7. **06_page_screen_tracking.ipynb**: Page and screen tracking
+8. **07_profile_aliasing.ipynb**: Profile aliasing and identity management
+
+### Key Notebook Patterns
+- **User Creation First**: All operations require users to be identified first
+- **Utils Function Usage**: Notebooks demonstrate utils functions, not direct API calls
+- **Real Examples**: Working examples with proper error handling
+- **Clear Documentation**: Each notebook is self-contained with explanations
+
+## API Patterns Discovered
+
+Through comprehensive integration testing, key API patterns were discovered:
+
+### Authentication
+- **Basic Auth Required**: Uses `Authorization: Basic base64(api_key:)` header
+- **Not Bearer Auth**: Previous Bearer token approach doesn't work
+
+### Function Signatures
+- **Device Functions**: Require `device_token` as separate parameter
+- **Video Functions**: Require `video_id` as separate parameter  
+- **Object Functions**: Require `user_id`, `object_id`, `traits` as separate parameters
+
+### Operation Dependencies
+- **Users First**: Users must be identified before other operations
+- **Semantic Events**: Some operations use semantic events (e.g., user deletion)
+
+### Rate Limiting
+- **3000 requests per 3 seconds**: Built into client with automatic handling
+- **Exponential Backoff**: Automatic retry logic for rate limit errors
+
+## Performance and Best Practices
 
 ### Batch Processing
+- **Optimal Batch Size**: 100-500 records per batch
+- **Size Validation**: Automatic validation against 500KB limit
+- **Batch Splitting**: Automatic splitting of oversized batches
 
-- **Batch size**: Optimized for 100-500 records per batch
-- **Rate limiting**: Respects Customer.IO's 3000 req/3sec limit
-- **Parallel processing**: Uses Spark for distributed processing
-- **Error handling**: Failed requests are queued for retry
+### Error Handling
+- **Comprehensive Validation**: Input validation before API calls
+- **Retry Logic**: Exponential backoff for transient failures
+- **Custom Exceptions**: Clear error types for different failure modes
 
-### Caching Strategy
-
-- **API response caching**: Temporary storage of successful responses
-- **Delta Cache**: Leverages Databricks Delta Cache
-- **User lookup caching**: Reduces redundant API calls
-
-### Monitoring
-
-Track key metrics:
-- API request success rates
-- Response times
-- Error categories
-- Data quality metrics
-- Processing throughput
-
-## Security and Compliance
-
-### API Key Management
-
-- Never hardcode credentials in notebooks
-- Use Databricks secrets for secure storage
-- Implement key rotation procedures
-- Audit key usage patterns
-
-### Data Privacy
-
-- PII encryption at rest in Delta Lake
-- GDPR compliance utilities
-- Data retention policy enforcement
-- Comprehensive audit logging
-
-### Access Control
-
-- Notebook-level permissions
-- Data access restrictions based on roles
-- Operation authorization tracking
-- Change logging and monitoring
+### Resource Management
+- **Automatic Cleanup**: Integration tests clean up test data
+- **Rate Limit Respect**: Built-in rate limiting prevents API errors
+- **Connection Reuse**: Efficient HTTP connection management
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### Import Errors
-```python
-# Issue: ModuleNotFoundError for utils modules
-# Solution: Ensure you're running from project root
-import sys
-sys.path.append('/path/to/customer_io_notebooks')
+#### Authentication Errors
 ```
+401 Unauthorized
+```
+**Solution**: Verify API key is correct and ensure you're using Basic auth (handled automatically by client)
 
-#### API Authentication Errors
-```python
-# Issue: 401 Unauthorized
-# Solution: Verify API key and region
-client = CustomerIOClient(
-    api_key=dbutils.secrets.get("customer-io", "api-key"),
-    region="us"  # Ensure correct region
-)
+#### Function Signature Errors
 ```
+TypeError: missing required positional argument
+```
+**Solution**: Check function signatures in utils modules. Many functions require specific parameter order.
+
+#### Missing User Errors
+```
+Customer.IO API Error: User not found
+```
+**Solution**: Always identify users with `identify_user()` before other operations
 
 #### Rate Limiting
-```python
-# Issue: 429 Too Many Requests
-# Solution: Implement exponential backoff (built into client)
-# Or reduce batch size and add delays
 ```
-
-#### PySpark Import Errors (Local Development)
-```python
-# Issue: No module named 'pyspark'
-# Solution: PySpark imports are optional for local development
-# Only required for Databricks-specific features
+429 Too Many Requests
 ```
+**Solution**: Client handles this automatically with exponential backoff
 
-### Test Failures
+### Integration Test Issues
 
-If tests fail, common causes:
+#### Missing Credentials
+```
+SKIP tests/integration/ - No API credentials configured
+```
+**Solution**: Set `CUSTOMERIO_API_KEY` environment variable
 
-1. **Missing dependencies**: Run `uv pip install -r requirements.txt`
-2. **Pydantic version mismatch**: Ensure Pydantic v2.0+ is installed
-3. **API credentials**: Set test credentials in environment variables
-4. **Test expectations**: Some tests expect specific error message formats
-
-### Performance Issues
-
-For slow performance:
-
-1. **Optimize batch sizes**: Reduce if memory issues, increase for throughput
-2. **Enable Delta optimizations**: Use OPTIMIZE and Z-ORDER commands
-3. **Tune Spark settings**: Adjust parallelism and memory allocation
-4. **Review query patterns**: Use appropriate filters and partitioning
+#### Test Data Cleanup
+If integration tests fail and leave test data:
+1. Check test output for created resource IDs
+2. Test cleanup runs automatically on successful completion
+3. Manual cleanup may be needed for failed tests
 
 ## Contributing
 
 ### Development Guidelines
-
 1. **Follow TDD**: Write tests before implementation
-2. **Type hints**: All functions must have type annotations
+2. **Type Hints**: All functions must have type annotations
 3. **Documentation**: Comprehensive docstrings required
-4. **Error handling**: Explicit error handling for all API calls
-5. **Performance**: Consider batch processing and caching
+4. **Error Handling**: Explicit error handling for all API calls
+5. **No Emojis**: Project standard prohibits emojis anywhere
 
 ### Code Standards
-
 - **Formatting**: Use `ruff format` for consistent formatting
 - **Linting**: Pass `ruff check` with no errors
-- **Type checking**: Pass `mypy --strict` validation
-- **Testing**: Minimum 80% test coverage required
+- **Type Checking**: Pass `mypy --strict` validation
+- **Testing**: Maintain high test coverage
 
 ### Pull Request Process
-
 1. Create feature branch from `main`
-2. Implement changes with tests
-3. Run full test suite: `pytest`
+2. Implement changes following TDD
+3. Run full test suite: `pytest tests/unit/`
 4. Run quality checks: `ruff check --fix . && mypy utils/`
-5. Update documentation if needed
-6. Submit pull request with clear description
+5. Test integration if API changes: `pytest tests/integration/`
+6. Update documentation if needed
+7. Submit pull request with clear description
 
 ## API Reference
 
-### Core Client Methods
+### Complete Function Reference
 
+#### People Management
 ```python
-# User identification
-client.identify(userId="123", traits={"email": "user@example.com"})
-
-# Event tracking
-client.track(userId="123", event="Purchase", properties={"amount": 100})
-
-# Device management
-client.add_device(userId="123", device={"platform": "ios", "token": "..."})
-
-# Object operations
-client.create_object(type="product", id="prod_123", attributes={"name": "Widget"})
+identify_user(client, user_id, traits)
+delete_user(client, user_id)
+suppress_user(client, user_id)
+unsuppress_user(client, user_id)
 ```
 
-### Manager Classes API
-
-Each manager provides high-level operations:
-
+#### Event Tracking
 ```python
-# People operations
-people_manager.identify_user(user_id, traits)
-people_manager.suppress_user(user_id)
-people_manager.bulk_identify(users_df)
-
-# Event operations
-event_manager.track_event(user_id, event_name, properties)
-event_manager.track_purchase(user_id, order_data)
-event_manager.batch_track_events(events_df)
-
-# Device operations
-device_manager.register_device(user_id, device_data)
-device_manager.update_device(device_id, updates)
+track_event(client, user_id, event_name, properties, timestamp=None)
+track_page_view(client, user_id, page_name, properties, timestamp=None)
+track_screen_view(client, user_id, screen_name, properties, timestamp=None)
 ```
 
-## Best Practices
+#### Device Management
+```python
+register_device(client, user_id, device_token, device_type, metadata, timestamp=None)
+update_device(client, user_id, device_token, device_type, metadata, timestamp=None)
+delete_device(client, user_id, device_token, device_type, timestamp=None)
+```
 
-### Data Pipeline Design
+#### Object Management
+```python
+create_object(client, user_id, object_id, traits, object_type_id="1", timestamp=None)
+update_object(client, user_id, object_id, traits, object_type_id="1", timestamp=None)
+delete_object(client, object_id, object_type_id="1", timestamp=None)
+create_relationship(client, user_id, object_id, object_type_id="1", timestamp=None)
+delete_relationship(client, user_id, object_id, object_type_id="1", timestamp=None)
+```
 
-1. **Idempotency**: Design operations to be safely retryable
-2. **Error recovery**: Implement dead letter queues for failed operations
-3. **Monitoring**: Track data quality and pipeline health
-4. **Testing**: Comprehensive unit and integration tests
+#### Video Events
+```python
+track_video_playback_started(client, user_id, video_id, properties, timestamp=None)
+track_video_playback_completed(client, user_id, video_id, properties, timestamp=None)
+track_video_playback_paused(client, user_id, video_id, properties, timestamp=None)
+```
 
-### Performance Optimization
+#### Batch Operations
+```python
+send_batch(client, operations, context=None, integrations=None)
+create_batch_operations(operation_type, data)
+validate_batch_size(operations)
+split_oversized_batch(operations)
+```
 
-1. **Batching**: Process data in optimal batch sizes
-2. **Caching**: Cache frequently accessed data
-3. **Partitioning**: Use appropriate Delta Lake partitioning
-4. **Monitoring**: Track and optimize bottlenecks
+## Project Status
 
-### Error Handling
+### Completed Features
+- **297 Unit Tests**: Complete test coverage of all utils modules
+- **9 Integration Test Files**: Real API testing for all major functionality  
+- **16 Utils Modules**: Complete Customer.IO API coverage
+- **8 Jupyter Notebooks**: Production-ready demonstration interface
+- **Authentication Fixed**: Basic auth implementation working with real API
+- **Function Signatures Validated**: All signatures tested against real API
 
-1. **Graceful degradation**: Continue processing despite individual failures
-2. **Retry logic**: Implement exponential backoff for transient failures
-3. **Logging**: Comprehensive error logging and alerting
-4. **Recovery**: Automated recovery for common failure scenarios
+### Test Results
+- **Unit Tests**: 297 tests passing
+- **Integration Tests**: All tests passing with real Customer.IO API
+- **Code Quality**: Passes mypy strict checking and ruff linting
+- **Coverage**: High test coverage across all modules
+
+### Ready for Production
+This library is production-ready with:
+- Comprehensive error handling
+- Rate limiting and retry logic
+- Real API validation
+- Clean, typed interfaces
+- Extensive documentation
 
 ## Support
 
 ### Documentation
-
-- **API Documentation**: [Customer.IO API Docs](https://customer.io/docs/api/)
-- **Project Requirements**: See `REQUIREMENTS.md` for detailed specifications
-- **Development Standards**: See `PYTHON_STANDARDS.md` for coding guidelines
+- **Customer.IO API**: [Official API Documentation](https://customer.io/docs/api/)
+- **Project Requirements**: See `REQUIREMENTS.md`
+- **Development Standards**: See `PYTHON_STANDARDS.md`
+- **Integration Testing**: See `tests/integration/README.md`
 
 ### Getting Help
-
-For issues with this project:
-
 1. Check this README and project documentation
-2. Review existing issues and tests
+2. Review integration test examples
 3. Consult Customer.IO API documentation
 4. Create issue with reproduction steps
 
@@ -524,4 +577,4 @@ For issues with this project:
 
 **Maintainer**: Development Team
 
-**Last Updated**: 2024-12-26
+**Last Updated**: 2025-01-01

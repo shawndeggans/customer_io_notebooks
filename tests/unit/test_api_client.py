@@ -112,7 +112,7 @@ class TestAPIClientAuthentication:
         headers = client.get_auth_headers()
         
         assert "Authorization" in headers
-        assert headers["Authorization"] == "Bearer test_key"
+        assert headers["Authorization"] == "Basic dGVzdF9rZXk6"
         assert headers["Content-Type"] == "application/json"
     
     def test_get_auth_headers_includes_user_agent(self, client):
@@ -198,7 +198,7 @@ class TestAPIClientRequests:
         # Check that request was called with proper headers
         call_args = mock_request.call_args
         headers = call_args[1]["headers"]
-        assert headers["Authorization"] == "Bearer test_key"
+        assert headers["Authorization"] == "Basic dGVzdF9rZXk6"
         assert headers["Content-Type"] == "application/json"
     
     def test_make_request_checks_rate_limit(self, client):
