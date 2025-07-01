@@ -1,6 +1,12 @@
-# Customer.IO Data Pipelines API Client Library
+# Customer.IO Multi-API Client Library
 
-A comprehensive Python client library and Jupyter notebook suite for the Customer.IO Data Pipelines API, built using Test-Driven Development (TDD) methodology. This project provides production-ready patterns for user management, event tracking, device management, and complete API integration.
+A comprehensive Python client library and Jupyter notebook suite for all Customer.IO APIs, built using Test-Driven Development (TDD) methodology. This project provides production-ready access to Data Pipelines API, App/Journeys API, and Webhook processing with complete API integration patterns.
+
+## Supported APIs
+
+- **Data Pipelines API**: User identification, event tracking, batch operations, GDPR compliance
+- **App/Journeys API**: Customer management, transactional messaging, campaign triggers
+- **Webhook Processing**: Signature verification, event parsing, delivery tracking
 
 ## Quick Start
 

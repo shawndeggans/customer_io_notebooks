@@ -1,0 +1,82 @@
+{
+  "api_responses": {
+    "identify_success": {
+      "status_code": 200,
+      "body": {
+        "status": "success",
+        "message": "User identified successfully",
+        "userId": "user_12345"
+      }
+    },
+    "track_success": {
+      "status_code": 200,
+      "body": {
+        "status": "success", 
+        "message": "Event tracked successfully",
+        "event": "Product Viewed"
+      }
+    },
+    "batch_success": {
+      "status_code": 200,
+      "body": {
+        "status": "success",
+        "processed": 10,
+        "failed": 0,
+        "errors": []
+      }
+    },
+    "rate_limit_error": {
+      "status_code": 429,
+      "body": {
+        "error": "Rate limit exceeded",
+        "message": "Too many requests"
+      },
+      "headers": {
+        "retry-after": "3"
+      }
+    },
+    "validation_error": {
+      "status_code": 400,
+      "body": {
+        "error": "Validation failed",
+        "message": "Invalid request format",
+        "details": ["userId is required"]
+      }
+    },
+    "authentication_error": {
+      "status_code": 401,
+      "body": {
+        "error": "Authentication failed", 
+        "message": "Invalid API key"
+      }
+    },
+    "server_error": {
+      "status_code": 500,
+      "body": {
+        "error": "Internal server error",
+        "message": "Unexpected error occurred"
+      }
+    },
+    "network_timeout": {
+      "status_code": null,
+      "error": "timeout",
+      "message": "Request timed out"
+    }
+  },
+  "region_response": {
+    "us": {
+      "status_code": 200,
+      "body": {
+        "region": "us",
+        "data_center": "us-east-1"
+      }
+    },
+    "eu": {
+      "status_code": 200,
+      "body": {
+        "region": "eu",
+        "data_center": "eu-west-1" 
+      }
+    }
+  }
+}
