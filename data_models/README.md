@@ -20,7 +20,8 @@ data_models/
 ├── 06_video.sql                        # Video tracking and playback events
 ├── 07_privacy_gdpr.sql                 # GDPR compliance and privacy
 ├── 08_batch_operations.sql             # Batch processing operations
-└── 09_user_aliases.sql                 # User aliases and profile merging
+├── 09_user_aliases.sql                 # User aliases and profile merging
+└── 10_app_api_communications.sql       # App API message delivery and analytics
 ```
 
 ## Table Descriptions
@@ -145,6 +146,21 @@ data_models/
 - Alias chain management
 - Identity resolution
 
+### 10_app_api_communications.sql
+**App API message delivery and performance analytics**
+- `app_transactional_messages` - Transactional email tracking and analytics
+- `app_broadcast_campaigns` - Broadcast campaign execution and performance
+- `app_push_notifications` - Push notification delivery and engagement
+- `app_message_performance` - Cross-channel message analytics
+- `app_delivery_errors` - Centralized error tracking and resolution
+
+**Key Features:**
+- End-to-end message delivery tracking
+- Cross-channel performance analytics
+- Template and campaign optimization insights
+- Error monitoring and resolution tracking
+- Conversion attribution and ROI analysis
+
 ## Database Schema
 
 All tables are designed for the `customerio` schema in Databricks Unity Catalog:
@@ -154,6 +170,9 @@ All tables are designed for the `customerio` schema in Databricks Unity Catalog:
 customerio.people
 customerio.events
 customerio.ecommerce_events
+customerio.app_transactional_messages
+customerio.app_broadcast_campaigns
+customerio.app_push_notifications
 -- ... etc
 ```
 
@@ -328,6 +347,8 @@ These tables are designed to facilitate:
 
 ### Source of Truth
 These data models are extracted from working integration tests in the codebase:
+
+**Pipelines API Models:**
 - `tests/integration/test_people_integration.py`
 - `tests/integration/test_event_integration.py` 
 - `tests/integration/test_ecommerce_integration.py`
@@ -337,6 +358,10 @@ These data models are extracted from working integration tests in the codebase:
 - `tests/integration/test_gdpr_integration.py`
 - `tests/integration/test_batch_integration.py`
 - `tests/integration/test_alias_integration.py`
+
+**App API Models:**
+- `tests/app_api/integration/test_messaging_integration.py`
+- `src/app_api/client.py` - Function signatures and response structures
 
 ### Compatibility
 - Designed for Databricks Unity Catalog

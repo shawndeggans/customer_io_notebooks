@@ -1,18 +1,19 @@
 # Testing Guide for Customer.IO Multi-API Client Library
 
-This document provides comprehensive guidance on testing practices, test data management, and the eternal test data system implemented in this project.
+This document provides comprehensive guidance on testing practices, test data management, and different testing strategies for each Customer.IO API.
 
 ## Table of Contents
 
 1. [Testing Philosophy](#testing-philosophy)
-2. [Test Data Management](#test-data-management)
-3. [Test Organization](#test-organization)
-4. [Running Tests](#running-tests)
-5. [Writing Tests](#writing-tests)
-6. [Integration Testing](#integration-testing)
-7. [Eternal Data System](#eternal-data-system)
-8. [Troubleshooting](#troubleshooting)
-9. [CI/CD Integration](#cicd-integration)
+2. [API-Specific Testing Approaches](#api-specific-testing-approaches)
+3. [Test Data Management](#test-data-management)
+4. [Test Organization](#test-organization)
+5. [Running Tests](#running-tests)
+6. [Writing Tests](#writing-tests)
+7. [Integration Testing](#integration-testing)
+8. [Eternal Data System](#eternal-data-system)
+9. [Troubleshooting](#troubleshooting)
+10. [CI/CD Integration](#cicd-integration)
 
 ## Testing Philosophy
 
@@ -55,6 +56,117 @@ def identify_user(client, user_id, traits):
 - **Fast Execution**: Unit tests should run quickly (< 1 second each)
 - **Isolation**: Tests should not depend on each other
 - **Deterministic**: Tests should produce consistent results
+
+## API-Specific Testing Approaches
+
+This project uses **different testing strategies** for each Customer.IO API based on their complexity and use cases:
+
+### Pipelines API - Complex Eternal Data System
+
+The **Data Pipelines API** requires sophisticated testing due to complex data relationships and comprehensive CRUD operations:
+
+**Key Features:**
+- **Eternal Test Data System**: Uses permanent test data to eliminate pollution
+- **Complex Resource Tracking**: Manages users, devices, objects, and relationships
+- **Read-only vs Mutation Tests**: Categorizes tests for safe execution
+- **Multi-mode Support**: Eternal, Create, and Existing data modes
+
+**Setup Required:**
+```bash
+# One-time eternal data setup
+python setup_eternal_data.py --create
+
+# Configure environment
+TEST_DATA_MODE=eternal
+ETERNAL_DATA_ENABLED=true
+```
+
+**Running Pipelines API Tests:**
+```bash
+# Safe read-only tests
+pytest tests/pipelines_api/integration/ -m "read_only" -v
+
+# All Pipelines API tests
+pytest tests/pipelines_api/integration/ -v
+```
+
+**Use Cases:**
+- Complex data pipeline testing
+- User lifecycle management
+- Object relationship testing
+- Batch operation validation
+
+### App API - Simple Direct Testing
+
+The **App/Journeys API** uses a **simplified direct approach** focused on communications:
+
+**Key Features:**
+- **Email-based Testing**: Uses email addresses directly, no customer creation needed
+- **Self-contained Tests**: No persistent data or complex cleanup
+- **Communications Focus**: Tests transactional emails, broadcasts, push notifications
+- **Simple Configuration**: Just requires API token
+
+**Setup Required:**
+```bash
+# Simple credential setup
+CUSTOMERIO_APP_API_TOKEN=your_app_api_token_here
+CUSTOMERIO_REGION=us
+```
+
+**Running App API Tests:**
+```bash
+# All App API tests (simple approach)
+pytest tests/app_api/integration/ -v
+```
+
+**Use Cases:**
+- Transactional email testing
+- Broadcast campaign validation
+- Push notification delivery
+- Error handling verification
+
+### Webhooks API - Unit Testing Only
+
+The **Webhooks** processing uses **unit testing with mocked payloads**:
+
+**Key Features:**
+- **Signature Verification**: Tests webhook signature validation
+- **Event Parsing**: Tests payload parsing and event handling
+- **Mock-based**: Uses sample webhook payloads for testing
+- **Fast Execution**: No external API dependencies
+
+**Running Webhook Tests:**
+```bash
+# Webhook unit tests
+pytest tests/webhooks/unit/ -v
+```
+
+**Use Cases:**
+- Webhook signature validation
+- Event payload parsing
+- Delivery tracking
+
+### Choosing the Right Approach
+
+| API | Complexity | Testing Approach | Data Management | Use When |
+|-----|------------|------------------|-----------------|----------|
+| **Pipelines API** | High | Eternal Data System | Complex relationships | Data pipeline testing |
+| **App API** | Medium | Direct Email Testing | Self-contained | Communications testing |
+| **Webhooks** | Low | Unit Testing | Mocked payloads | Event processing |
+
+### Migration Between Approaches
+
+**From Complex to Simple (App API model):**
+1. Remove customer fixture dependencies
+2. Use email addresses directly in tests
+3. Eliminate eternal data requirements
+4. Focus on core functionality testing
+
+**From Simple to Complex (Pipelines API model):**
+1. Implement eternal data system
+2. Add resource tracking and cleanup
+3. Create complex test scenarios
+4. Add read-only vs mutation categorization
 
 ## Test Data Management
 

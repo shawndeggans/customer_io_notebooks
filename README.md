@@ -68,11 +68,13 @@ result = track_event(
 )
 ```
 
-### Test Data Management
+### Testing Approaches
 
-This project includes an advanced **Eternal Test Data System** that eliminates test data pollution:
+This project uses **different testing strategies** for each API based on their complexity:
 
-#### Quick Setup
+#### Pipelines API - Eternal Test Data System
+The Pipelines API uses an advanced **Eternal Test Data System** for comprehensive data testing:
+
 ```bash
 # Preview eternal test data
 python setup_eternal_data.py --dry-run
@@ -87,10 +89,26 @@ python setup_eternal_data.py --create
 pytest tests/pipelines_api/integration/ -m "read_only" -v
 ```
 
-#### Test Data Modes
+**Test Data Modes:**
 - **Eternal Mode** (recommended): Uses permanent test data, no cleanup needed
 - **Create Mode** (default): Creates new data each run, requires cleanup
 - **Existing Mode**: Uses specified existing data IDs
+
+#### App API - Simple Direct Testing
+The App API uses **direct email-based testing** for communications:
+
+```bash
+# Simple setup - just add credentials to .env
+CUSTOMERIO_APP_API_TOKEN=your_app_api_token_here
+
+# Run App API tests (uses email addresses directly)
+pytest tests/app_api/integration/ -v
+```
+
+**App API Testing Features:**
+- **Email-based testing**: No complex customer creation needed
+- **Automatic cleanup**: Tests are self-contained
+- **Communications focus**: Tests transactional emails, broadcasts, push notifications
 
 See [TESTING.md](docs/TESTING.md) for comprehensive testing documentation.
 
@@ -365,9 +383,9 @@ ruff check --fix . && ruff format . && mypy utils/ && pytest tests/unit/
 
 ### Real API Testing
 
-The project includes comprehensive integration tests that work with the actual Customer.IO API with advanced test data management:
+The project includes comprehensive integration tests that work with actual Customer.IO APIs using **different strategies per API**:
 
-#### Setup Integration Testing
+#### Pipelines API Integration Testing
 
 1. **Get API Credentials**: Obtain your Customer.IO API key
 2. **Configure Environment**:
@@ -387,16 +405,34 @@ The project includes comprehensive integration tests that work with the actual C
    python setup_eternal_data.py --create
    ```
 
-4. **Run Integration Tests**:
+4. **Run Pipelines API Tests**:
    ```bash
    # Run safe read-only tests
    pytest tests/pipelines_api/integration/ -m "read_only" -v
    
-   # Run all integration tests
+   # Run all Pipelines API tests
    pytest tests/pipelines_api/integration/ -v
    ```
 
+#### App API Integration Testing
+
+1. **Get App API Token**: Obtain your Customer.IO App API Bearer token
+2. **Configure Environment**:
+   ```bash
+   # Add App API credentials to .env file
+   CUSTOMERIO_APP_API_TOKEN=your_app_api_token_here
+   CUSTOMERIO_REGION=us  # or "eu"
+   ```
+
+3. **Run App API Tests** (no setup required):
+   ```bash
+   # Run App API integration tests (simple email-based approach)
+   pytest tests/app_api/integration/ -v
+   ```
+
 #### Integration Test Coverage
+
+**Pipelines API Tests:**
 - **People Management**: User identification, suppression, deletion
 - **Event Tracking**: Custom events, semantic events, video, mobile
 - **Device Management**: Device registration, updates, deletion
@@ -406,22 +442,48 @@ The project includes comprehensive integration tests that work with the actual C
 - **Video Events**: Playback lifecycle, content tracking
 - **GDPR Compliance**: User suppression, data deletion
 
+**App API Tests:**
+- **Transactional Messaging**: Email sending using identifiers and direct email
+- **Broadcast Triggers**: Campaign triggering with configuration
+- **Push Notifications**: Mobile push notification delivery
+- **Error Handling**: API error response validation
+- **Unicode Support**: International content handling
+
 #### Key Integration Test Features
+
+**Pipelines API Features:**
 - **Eternal Data System**: Eliminates test data pollution with permanent test data
 - **Smart Data Mode**: Automatically uses eternal data when available
+- **Test Categorization**: Read-only vs mutation tests for safe execution
+- **Complex Resource Tracking**: Manages relationships between users, devices, objects
+
+**App API Features:**
+- **Direct Email Testing**: No customer creation needed, uses email addresses directly
+- **Automatic Cleanup**: Self-contained tests with no persistent data
+- **Simple Configuration**: Just requires API token, no complex setup
+
+**Shared Features:**
 - **Rate Limiting**: Respects Customer.IO API limits with built-in throttling
 - **Error Handling**: Tests both success and failure scenarios
 - **Real API Patterns**: Validates actual API behavior
-- **Test Categorization**: Read-only vs mutation tests for safe execution
 
 ### Authentication
 
-**Important**: Customer.IO Data Pipelines API uses **Basic Authentication**, not Bearer tokens:
+Customer.IO APIs use **different authentication methods**:
 
+#### Pipelines API - Basic Authentication
 ```python
-# Correct authentication pattern discovered through integration testing
+# Pipelines API uses Basic Authentication
 client = CustomerIOClient(api_key="your_api_key", region="us")
 # This creates Basic auth header: Authorization: Basic base64(api_key:)
+```
+
+#### App API - Bearer Token Authentication
+```python
+# App API uses Bearer Token Authentication
+from src.app_api.auth import AppAPIAuth
+auth = AppAPIAuth(api_token="your_app_api_token", region="us")
+# This creates Bearer auth header: Authorization: Bearer your_app_api_token
 ```
 
 ## Jupyter Notebooks
