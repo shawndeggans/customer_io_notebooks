@@ -18,6 +18,13 @@ from dotenv import load_dotenv
 
 from src.pipelines_api.api_client import CustomerIOClient
 from src.pipelines_api.exceptions import CustomerIOError, AuthenticationError
+from tests.eternal_config import eternal_config, get_eternal_data_for_test
+from tests.eternal_utils import (
+    get_test_user_data, 
+    get_test_device_data, 
+    get_test_object_data,
+    skip_if_eternal_data_missing
+)
 
 
 # Load environment variables from .env file
@@ -32,7 +39,9 @@ TEST_CONFIG = {
     "debug": os.getenv("DEBUG_INTEGRATION_TESTS", "false").lower() == "true",
     "rate_limit": int(os.getenv("TEST_RATE_LIMIT_PER_SECOND", "10")),
     "retention_hours": int(os.getenv("TEST_DATA_RETENTION_HOURS", "24")),
-    "skip_if_no_creds": os.getenv("SKIP_IF_NO_CREDENTIALS", "true").lower() == "true"
+    "skip_if_no_creds": os.getenv("SKIP_IF_NO_CREDENTIALS", "true").lower() == "true",
+    "test_data_mode": os.getenv("TEST_DATA_MODE", "create").lower(),
+    "eternal_data_enabled": os.getenv("ETERNAL_DATA_ENABLED", "false").lower() == "true"
 }
 
 
@@ -102,13 +111,19 @@ def authenticated_client(api_credentials) -> CustomerIOClient:
 @pytest.fixture
 def test_user_id() -> str:
     """
-    Generate a unique test user ID.
+    Generate a unique test user ID or return eternal user ID.
     
     Returns
     -------
     str
-        Unique user ID for testing
+        User ID for testing (eternal or newly generated)
     """
+    # Check if we should use eternal data
+    user_data = get_test_user_data("basic")
+    if user_data and eternal_config.is_eternal_mode:
+        return user_data["id"]
+    
+    # Generate new ID for create mode
     timestamp = int(time.time())
     unique_id = uuid.uuid4().hex[:8]
     return f"{TEST_CONFIG['test_env']}_user_{timestamp}_{unique_id}"
@@ -147,13 +162,19 @@ def test_object_id() -> str:
 @pytest.fixture
 def test_device_id() -> str:
     """
-    Generate a unique test device ID.
+    Generate a unique test device ID or return eternal device ID.
     
     Returns
     -------
     str
-        Unique device ID for testing
+        Device ID for testing (eternal or newly generated)
     """
+    # Check if we should use eternal data
+    device_data = get_test_device_data("ios")
+    if device_data and eternal_config.is_eternal_mode:
+        return device_data["id"]
+    
+    # Generate new ID for create mode
     timestamp = int(time.time())
     unique_id = uuid.uuid4().hex[:8]
     return f"{TEST_CONFIG['test_env']}_device_{timestamp}_{unique_id}"
@@ -162,18 +183,27 @@ def test_device_id() -> str:
 @pytest.fixture
 def test_user_data(test_user_id) -> Dict[str, Any]:
     """
-    Generate test user data with traits.
+    Generate test user data with traits or return eternal user data.
     
     Parameters
     ----------
     test_user_id : str
-        Unique test user ID
+        Test user ID (eternal or newly generated)
         
     Returns
     -------
     dict
         User data including ID and traits
     """
+    # Check if we should use eternal data
+    user_data = get_test_user_data("basic")
+    if user_data and eternal_config.is_eternal_mode:
+        return {
+            "userId": user_data["id"],
+            "traits": user_data["traits"]
+        }
+    
+    # Generate new data for create mode
     return {
         "userId": test_user_id,
         "traits": {
@@ -267,6 +297,29 @@ def cleanup_tracker():
     # This tracker is for manual cleanup if needed
 
 
+@pytest.fixture
+def eternal_data_check(authenticated_client, request):
+    """
+    Check if eternal data is available and skip test if needed.
+    
+    Parameters
+    ----------
+    authenticated_client : CustomerIOClient
+        API client for data validation
+    request : pytest.FixtureRequest
+        Pytest request object to access test markers
+    """
+    if eternal_config.is_eternal_mode:
+        # Check if test requires specific data types
+        required_data = getattr(request.node.get_closest_marker("eternal_data"), "args", []) if request.node.get_closest_marker("eternal_data") else ["user"]
+        
+        skip_reason = skip_if_eternal_data_missing(authenticated_client, required_data)
+        if skip_reason:
+            pytest.skip(skip_reason)
+    
+    return True
+
+
 @pytest.fixture(autouse=True)
 def test_isolation(rate_limiter):
     """
@@ -307,6 +360,18 @@ def pytest_configure(config):
         "markers",
         "cleanup: mark test as requiring cleanup of test data"
     )
+    config.addinivalue_line(
+        "markers",
+        "read_only: mark test as read-only (safe for eternal data)"
+    )
+    config.addinivalue_line(
+        "markers",
+        "mutation: mark test as mutating data (requires careful eternal data handling)"
+    )
+    config.addinivalue_line(
+        "markers",
+        "eternal_data: mark test as requiring specific eternal data types (user, device, object)"
+    )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -331,3 +396,12 @@ def pytest_collection_modifyitems(config, items):
                 reason="Customer.IO API credentials not configured"
             )
             item.add_marker(skip_marker)
+        
+        # Add read_only marker to tests that don't modify data
+        if eternal_config.is_eternal_mode:
+            # Check if test looks like it modifies data
+            test_name = item.name.lower()
+            if any(keyword in test_name for keyword in ["delete", "suppress", "unsuppress", "create", "update", "modify"]):
+                item.add_marker(pytest.mark.mutation)
+            else:
+                item.add_marker(pytest.mark.read_only)

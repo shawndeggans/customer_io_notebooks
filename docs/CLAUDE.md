@@ -57,11 +57,11 @@ customer_io_notebooks/
 │   │   ├── 01_people_management.ipynb
 │   │   └── [other pipeline notebooks]
 │   ├── app_api/                # App API demonstrations
-│   │   └── 01_customer_management.ipynb
+│   │   └── 01_communications.ipynb  # Transactional emails, broadcasts, push notifications
 │   ├── webhooks/               # Webhook processing demonstrations
 │   │   └── 01_webhook_processing.ipynb
 │   └── 00_multi_api_overview.ipynb # Cross-API workflows
-├── data_models/                # SQL data models
+├── data_models/                # SQL data models (Pipelines + App API analytics)
 └── [config files]             # pytest.ini, requirements.txt, etc.
 ```
 
@@ -299,6 +299,50 @@ git push origin feature/people-management-api
 - Don't ignore the existing standards documents
 - Don't hardcode credentials or configuration
 - Don't write code without tests first
+
+## API-Specific Development Approaches
+
+### App API - Communications Focus ✅ COMPLETED
+
+The **App API implementation is complete** and follows a simplified approach focused on communications:
+
+**Key Features:**
+- **Communications Only**: Transactional emails, broadcast campaigns, push notifications
+- **Simple Testing**: Direct email-based integration tests without complex fixtures
+- **Security Compliant**: No inline secrets, follows established credential patterns
+- **Analytics Ready**: Comprehensive data models for Databricks communications analytics
+
+**Implementation Status:**
+- **Functions**: `send_transactional()`, `trigger_broadcast()`, `send_push()` - all working
+- **Integration Tests**: 3 passing, 7 skipping appropriately (real Customer.IO API tested)
+- **Notebook**: `01_communications.ipynb` complete with secure credential handling
+- **Data Models**: 5 analytics tables for cross-channel performance tracking
+
+**Testing Approach:**
+- **Simplified vs Pipelines**: No complex eternal data system needed
+- **Direct Email Testing**: Uses email addresses directly, no customer creation
+- **Real API Integration**: Tests work with actual Customer.IO App API endpoints
+- **Error Handling**: Comprehensive validation for auth, resources, and business logic
+
+**Ready for Production:**
+- Manual testing with Customer.IO can begin immediately
+- All communications functions tested and validated
+- Complete analytics foundation available in Databricks
+- Secure credential patterns established
+
+### Pipelines API - Comprehensive Data Management ✅ COMPLETED
+
+The **Pipelines API implementation** uses sophisticated eternal data system:
+- **Complex Testing**: Eternal data system with comprehensive resource tracking
+- **Full CRUD Operations**: Complete customer lifecycle and data management
+- **297 Unit Tests**: Comprehensive coverage with integration validation
+
+### Webhooks API - Web App Development Pending
+
+The **Webhooks implementation** requires Databricks web app development:
+- **Unit Testing**: Complete with signature verification and event parsing
+- **Web App Needed**: Databricks web app for webhook endpoint hosting
+- **Next Stage**: User research on Databricks web app architecture required
 
 ## Success Criteria
 

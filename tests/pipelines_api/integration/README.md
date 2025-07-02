@@ -1,6 +1,6 @@
 # Customer.IO Integration Tests
 
-This directory contains integration tests that validate the Customer.IO API client library against the real Customer.IO API.
+This directory contains integration tests that validate the Customer.IO API client library against the real Customer.IO API. The tests support multiple data management modes including an advanced **Eternal Test Data System** that eliminates test data pollution.
 
 ## Prerequisites
 
@@ -14,41 +14,86 @@ You need a Customer.IO account with API access. Sign up at [customer.io](https:/
 4. Note your region (US or EU)
 
 ### 3. Environment Setup
-1. Copy the example environment file:
+1. Create `.env` file with your credentials:
    ```bash
-   cp .env.example .env
-   ```
-
-2. Edit `.env` and add your credentials:
-   ```bash
+   # Customer.IO API Configuration
    CUSTOMERIO_API_KEY=your_api_key_here
    CUSTOMERIO_REGION=us  # or 'eu'
+   
+   # Test Data Mode Configuration
+   TEST_DATA_MODE=eternal  # Recommended: eternal, create, existing
+   ETERNAL_DATA_ENABLED=true
+   SKIP_IF_NO_ETERNAL_DATA=true
+   
+   # Optional: Debug and rate limiting
+   DEBUG_INTEGRATION_TESTS=false
+   TEST_RATE_LIMIT_PER_SECOND=10
+   ```
+
+2. Setup eternal test data (recommended):
+   ```bash
+   # Preview what will be created
+   python setup_eternal_data.py --dry-run
+   
+   # Create permanent test data (one-time setup)
+   python setup_eternal_data.py --create
    ```
 
 3. Install dependencies:
    ```bash
    pip install -r requirements.txt
-   pip install python-dotenv  # If not already installed
    ```
 
 ## Running Integration Tests
 
-### Run All Integration Tests
+### Test Data Modes
+
+#### Eternal Data Mode (Recommended)
+Uses permanent test data, eliminating data pollution:
 ```bash
-pytest tests/integration/ -v
+# Run safe read-only tests
+pytest tests/pipelines_api/integration/ -m "read_only" -v
+
+# Run all tests (including mutations)
+pytest tests/pipelines_api/integration/ -v
 ```
 
-### Run Specific Test File
+#### Create Data Mode (Traditional)
+Creates new data for each test run:
 ```bash
-pytest tests/integration/test_people_integration.py -v
+TEST_DATA_MODE=create pytest tests/pipelines_api/integration/ -v
 ```
 
-### Run with Debug Output
+### Test Selection
+
+#### Run All Integration Tests
 ```bash
-DEBU G_INTEGRATION_TESTS=true pytest tests/integration/ -v -s
+pytest tests/pipelines_api/integration/ -v
 ```
 
-### Skip Integration Tests (Run Only Unit Tests)
+#### Run Specific Test File
+```bash
+pytest tests/pipelines_api/integration/test_people_integration.py -v
+```
+
+#### Run by Test Category
+```bash
+# Run only read-only tests (safe for eternal data)
+pytest tests/pipelines_api/integration/ -m "read_only" -v
+
+# Run only mutation tests (handle carefully)
+pytest tests/pipelines_api/integration/ -m "mutation" -v
+
+# Run tests requiring specific data types
+pytest tests/pipelines_api/integration/ -m "eternal_data" -v
+```
+
+#### Run with Debug Output
+```bash
+DEBUG_INTEGRATION_TESTS=true pytest tests/pipelines_api/integration/ -v -s
+```
+
+#### Skip Integration Tests (Run Only Unit Tests)
 ```bash
 pytest -m "not integration"
 ```
@@ -73,26 +118,154 @@ pytest -m "not integration"
 ## Configuration Options
 
 ### Environment Variables
+
+#### Core Configuration
 - `CUSTOMERIO_API_KEY` - Your Customer.IO API key (required)
 - `CUSTOMERIO_REGION` - API region: 'us' or 'eu' (default: 'us')
 - `TEST_ENVIRONMENT` - Test environment identifier (default: 'test')
-- `DEBUG_INTEGRATION_TESTS` - Enable debug logging (default: false)
+
+#### Test Data Management
+- `TEST_DATA_MODE` - Data mode: 'eternal', 'create', 'existing' (default: 'create')
+- `ETERNAL_DATA_ENABLED` - Enable eternal data system (default: 'false')
+- `ETERNAL_DATA_VERSION` - Version of eternal data (default: '2025_01_02_v1')
+- `SKIP_IF_NO_ETERNAL_DATA` - Skip tests if eternal data missing (default: 'true')
+
+#### Performance and Debugging
+- `DEBUG_INTEGRATION_TESTS` - Enable debug logging (default: 'false')
 - `TEST_RATE_LIMIT_PER_SECOND` - Max requests per second (default: 10)
-- `TEST_DATA_RETENTION_HOURS` - Auto-cleanup age (default: 24)
-- `SKIP_IF_NO_CREDENTIALS` - Skip tests if no credentials (default: true)
+- `TEST_DATA_RETENTION_HOURS` - Auto-cleanup age for create mode (default: 24)
+- `SKIP_IF_NO_CREDENTIALS` - Skip tests if no credentials (default: 'true')
+
+## Eternal Test Data System
+
+### Overview
+
+The eternal test data system provides a sophisticated approach to integration testing that eliminates data pollution and provides consistent test scenarios.
+
+### Key Benefits
+
+1. **No Data Pollution**: Tests use permanent data instead of creating hundreds of temporary records
+2. **Consistent Results**: Same test data across all test runs
+3. **Faster Execution**: Reduced API calls during testing
+4. **Easy Maintenance**: No cleanup required for read-only tests
+
+### Test Data Types
+
+#### Users
+- `basic`: Standard user with minimal data
+- `premium`: User with rich profile data
+- `inactive`: User for testing edge cases
+- `suppression`: User for GDPR suppression testing
+- `alias_primary`: User for alias testing
+- `gdpr`: User for GDPR compliance testing
+
+#### Devices
+- `ios_basic`: iOS device for mobile testing
+- `android_basic`: Android device for mobile testing  
+- `web_basic`: Web device for browser testing
+
+#### Objects
+- `company_a`, `company_b`: Company objects for relationship testing
+- `product_x`, `product_y`: Product objects for e-commerce testing
+
+### Test Scenarios
+
+The system includes predefined scenarios that map to specific data combinations:
+- `user_identification`: Basic user management operations
+- `event_tracking`: Event tracking with different event types
+- `device_management`: Device registration and updates
+- `object_relationships`: Object and relationship management
+
+### Using Eternal Data in Tests
+
+#### Read-Only Pattern (Recommended)
+```python
+@pytest.mark.read_only
+@pytest.mark.eternal_data("user")
+def test_user_identification(authenticated_client, eternal_data_check):
+    """Test user identification using eternal data."""
+    user_data = get_test_user_data("basic")
+    
+    if user_data:
+        # Use eternal data for testing
+        result = identify_user(authenticated_client, user_data["id"], user_data["traits"])
+        assert_successful_response(result)
+    else:
+        pytest.skip("Eternal user data not available")
+```
+
+#### Mutation Pattern (Use Carefully)
+```python
+@pytest.mark.mutation
+@pytest.mark.eternal_data("user")
+def test_user_suppression(authenticated_client, eternal_data_check):
+    """Test user suppression with eternal data."""
+    user_data = get_test_user_data("suppression")
+    
+    if eternal_config.is_eternal_mode and user_data:
+        # Use dedicated suppression test user
+        user_id = user_data["id"]
+        
+        # Suppress and then unsuppress to restore state
+        suppress_user(authenticated_client, user_id)
+        unsuppress_user(authenticated_client, user_id)
+    else:
+        # Fallback to create mode
+        pytest.skip("Eternal suppression data not available")
+```
+
+### Migration from Create Mode
+
+#### Step 1: Create Eternal Data
+```bash
+python setup_eternal_data.py --create
+```
+
+#### Step 2: Update Test Code
+```python
+# Before (create mode)
+def test_user_operations(authenticated_client, test_user_id):
+    traits = {"email": f"{test_user_id}@test.com"}
+    identify_user(authenticated_client, test_user_id, traits)
+    # ... test operations
+    cleanup_user(authenticated_client, test_user_id)
+
+# After (eternal mode)
+@pytest.mark.read_only
+@pytest.mark.eternal_data("user")
+def test_user_operations(authenticated_client, eternal_data_check):
+    user_data = get_test_user_data("basic")
+    # ... test operations (no cleanup needed)
+```
+
+#### Step 3: Enable Eternal Mode
+```bash
+TEST_DATA_MODE=eternal pytest tests/pipelines_api/integration/ -v
+```
 
 ## Best Practices
 
-### 1. Test Data Naming
-All test data uses predictable naming patterns:
+### 1. Test Data Strategy
+
+#### Eternal Data Mode (Recommended)
+- Use permanent test data with predictable IDs
+- Users: `eternal_test_user_{type}` (e.g., `eternal_test_user_basic`)
+- Objects: `eternal_test_{type}_{name}` (e.g., `eternal_test_company_a`)
+- Devices: `eternal_test_device_{platform}_basic`
+- No cleanup required for read-only tests
+
+#### Create Data Mode (Traditional)
+- Generate unique IDs for each test run
 - Users: `test_{type}_user_{timestamp}_{unique_id}`
-- Objects: `test_{type}_obj_{timestamp}_{unique_id}`
+- Objects: `test_{type}_obj_{timestamp}_{unique_id}`  
 - Devices: `test_{type}_device_{timestamp}_{unique_id}`
+- Requires cleanup after test completion
 
 This ensures:
 - Easy identification of test data
 - No conflicts with production data
-- Simple cleanup if needed
+- Consistent test scenarios (eternal mode)
+- Simple cleanup when needed (create mode)
 
 ### 2. Test Isolation
 Each test:
@@ -136,7 +309,25 @@ NetworkError: Request timeout
 ```
 **Solution**: Check your internet connection and Customer.IO API status.
 
-#### 4. Test Data Not Cleaned Up
+#### 4. Eternal Data Not Found
+```
+Eternal test data not found: user type 'basic' not available
+```
+**Solution**: 
+1. Run `python setup_eternal_data.py --create` to create eternal data
+2. Verify `ETERNAL_DATA_ENABLED=true` in `.env`
+3. Check eternal data version matches in configuration
+
+#### 5. Test Data Pollution
+```
+Error: Too many test records in workspace (800+ records)
+```
+**Solution**: 
+1. Switch to eternal data mode: `TEST_DATA_MODE=eternal`
+2. Run read-only tests: `pytest -m "read_only" -v`
+3. Implement proper cleanup in existing create-mode tests
+
+#### 6. Test Data Not Cleaned Up (Create Mode)
 If tests fail and leave data:
 1. Check test output for created resource IDs
 2. Use Customer.IO dashboard to manually delete

@@ -232,6 +232,9 @@ SHOW TABLES IN customerio;
 
 -- User aliases
 \source 09_user_aliases.sql
+
+-- App API communications
+\source 10_app_api_communications.sql
 */
 
 -- ==================================================

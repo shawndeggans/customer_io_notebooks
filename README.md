@@ -45,9 +45,9 @@ uv pip install -r requirements.txt
 ### Basic Usage
 
 ```python
-from utils.api_client import CustomerIOClient
-from utils.people_manager import identify_user
-from utils.event_manager import track_event
+from src.pipelines_api.api_client import CustomerIOClient
+from src.pipelines_api.people_manager import identify_user
+from src.pipelines_api.event_manager import track_event
 
 # Initialize client with Basic authentication
 client = CustomerIOClient(api_key="your_api_key", region="us")
@@ -68,6 +68,50 @@ result = track_event(
 )
 ```
 
+### Testing Approaches
+
+This project uses **different testing strategies** for each API based on their complexity:
+
+#### Pipelines API - Eternal Test Data System
+The Pipelines API uses an advanced **Eternal Test Data System** for comprehensive data testing:
+
+```bash
+# Preview eternal test data
+python setup_eternal_data.py --dry-run
+
+# Create permanent test data  
+python setup_eternal_data.py --create
+
+# Enable eternal data mode
+# Set TEST_DATA_MODE=eternal in .env
+
+# Run tests without creating new data
+pytest tests/pipelines_api/integration/ -m "read_only" -v
+```
+
+**Test Data Modes:**
+- **Eternal Mode** (recommended): Uses permanent test data, no cleanup needed
+- **Create Mode** (default): Creates new data each run, requires cleanup
+- **Existing Mode**: Uses specified existing data IDs
+
+#### App API - Simple Direct Testing
+The App API uses **direct email-based testing** for communications:
+
+```bash
+# Simple setup - just add credentials to .env
+CUSTOMERIO_APP_API_TOKEN=your_app_api_token_here
+
+# Run App API tests (uses email addresses directly)
+pytest tests/app_api/integration/ -v
+```
+
+**App API Testing Features:**
+- **Email-based testing**: No complex customer creation needed
+- **Automatic cleanup**: Tests are self-contained
+- **Communications focus**: Tests transactional emails, broadcasts, push notifications
+
+See [TESTING.md](docs/TESTING.md) for comprehensive testing documentation.
+
 ## Project Structure
 
 ```
@@ -76,11 +120,18 @@ customer_io_notebooks/
 ├── requirements.txt                    # Python dependencies
 ├── devbox.json                         # Development environment
 ├── pytest.ini                         # Test configuration
-├── CLAUDE.md                           # AI assistant guidelines
-├── PYTHON_STANDARDS.md                 # Development standards
-├── REQUIREMENTS.md                     # Detailed project requirements
+├── setup_eternal_data.py               # Eternal test data setup script
+├── docs/                               # Project documentation
+│   ├── CLAUDE.md                       # AI assistant guidelines
+│   ├── PYTHON_STANDARDS.md             # Development standards
+│   ├── REQUIREMENTS.md                 # Detailed project requirements
+│   ├── TESTING.md                      # Comprehensive testing guide
+│   └── WAVE2_PLAN.md                   # Multi-API development strategy
+├── specs/                              # API specifications
+│   ├── cio_pipelines_api.json          # Data Pipelines API spec
+│   ├── cio_journeys_app_api.json       # App/Journeys API spec
+│   └── cio_reporting_webhooks.json     # Webhook events spec
 ├── TODO.md                             # Development progress tracking
-├── cio_pipelines_api.json             # Customer.IO API specification
 │
 ├── 00_setup_and_configuration.ipynb   # Basic setup and authentication
 ├── 01_people_management.ipynb          # User identification and management
@@ -91,56 +142,57 @@ customer_io_notebooks/
 ├── 06_page_screen_tracking.ipynb      # Page and screen tracking
 ├── 07_profile_aliasing.ipynb           # Profile aliasing and identity management
 │
-├── utils/                              # Python client library modules
-│   ├── __init__.py
-│   ├── api_client.py                   # Core API client with Basic auth
-│   ├── alias_manager.py                # Profile aliasing operations
-│   ├── batch_manager.py                # Batch operations
-│   ├── device_manager.py               # Device management
-│   ├── ecommerce_manager.py            # E-commerce semantic events
-│   ├── event_manager.py                # Core event tracking
-│   ├── exceptions.py                   # Custom exception classes
-│   ├── gdpr_manager.py                 # GDPR compliance operations
-│   ├── mobile_manager.py               # Mobile app semantic events
-│   ├── object_manager.py               # Objects and relationships
-│   ├── page_manager.py                 # Page tracking
-│   ├── people_manager.py               # User identification and management
-│   ├── screen_manager.py               # Screen tracking
-│   ├── validators.py                   # Input validation utilities
-│   └── video_manager.py                # Video semantic events
+├── src/                                # Source code organized by API
+│   ├── pipelines_api/                  # Data Pipelines API client library
+│   │   ├── __init__.py
+│   │   ├── api_client.py               # Core API client with Basic auth
+│   │   ├── people_manager.py           # User identification and management
+│   │   ├── event_manager.py            # Core event tracking
+│   │   ├── device_manager.py           # Device management
+│   │   ├── object_manager.py           # Objects and relationships
+│   │   ├── batch_manager.py            # Batch operations
+│   │   ├── alias_manager.py            # Profile aliasing operations
+│   │   ├── gdpr_manager.py             # GDPR compliance operations
+│   │   ├── ecommerce_manager.py        # E-commerce semantic events
+│   │   ├── mobile_manager.py           # Mobile app semantic events
+│   │   ├── video_manager.py            # Video semantic events
+│   │   ├── page_manager.py             # Page tracking
+│   │   ├── screen_manager.py           # Screen tracking
+│   │   ├── validators.py               # Input validation utilities
+│   │   └── exceptions.py               # Custom exception classes
+│   ├── app_api/                        # App/Journeys API client library
+│   │   ├── __init__.py
+│   │   ├── auth.py                     # Bearer token authentication
+│   │   └── client.py                   # Customer management, messaging
+│   └── webhooks/                       # Webhook processing utilities
+│       ├── __init__.py
+│       └── processor.py                # Signature verification, event parsing
 │
 └── tests/                              # Comprehensive test suite
-    ├── conftest.py                     # Test configuration
-    ├── pytest.ini                     # Test settings
-    ├── unit/                           # Unit tests (297 tests)
-    │   ├── test_api_client.py
-    │   ├── test_alias_manager.py
-    │   ├── test_batch_manager.py
-    │   ├── test_device_manager.py
-    │   ├── test_ecommerce_manager.py
-    │   ├── test_event_manager.py
-    │   ├── test_exceptions.py
-    │   ├── test_gdpr_manager.py
-    │   ├── test_mobile_manager.py
-    │   ├── test_object_manager.py
-    │   ├── test_page_manager.py
-    │   ├── test_people_manager.py
-    │   ├── test_screen_manager.py
-    │   └── test_video_manager.py
-    └── integration/                    # Integration tests with real API
-        ├── README.md                   # Integration testing guide
-        ├── base.py                     # Base test class
-        ├── conftest.py                 # Integration test fixtures
-        ├── utils.py                    # Test utilities
-        ├── test_alias_integration.py
-        ├── test_batch_integration.py
-        ├── test_device_integration.py
-        ├── test_ecommerce_integration.py
-        ├── test_event_integration.py
-        ├── test_gdpr_integration.py
-        ├── test_object_integration.py
-        ├── test_people_integration.py
-        └── test_video_integration.py
+    ├── conftest.py                     # Global test configuration
+    ├── eternal_config.py               # Eternal data configuration
+    ├── eternal_test_data.py            # Test data definitions
+    ├── eternal_utils.py                # Data discovery utilities
+    ├── fixtures/                       # Test data files
+    ├── pipelines_api/                  # Pipelines API tests
+    │   ├── unit/                       # Unit tests with mocks
+    │   │   ├── test_api_client.py
+    │   │   ├── test_people_manager.py
+    │   │   ├── test_event_manager.py
+    │   │   └── [other unit tests]
+    │   └── integration/                # Real API integration tests
+    │       ├── README.md               # Integration testing guide
+    │       ├── conftest.py             # Integration test fixtures
+    │       ├── base.py                 # Base test class
+    │       ├── utils.py                # Test utilities
+    │       ├── test_people_integration.py
+    │       ├── test_event_integration.py
+    │       └── [other integration tests]
+    ├── app_api/                        # App API tests
+    │   ├── unit/
+    │   └── integration/
+    └── webhooks/                       # Webhook tests
+        └── unit/
 ```
 
 ## Core Components
@@ -298,9 +350,15 @@ pytest --cov=utils --cov-report=term-missing --cov-report=html
 
 #### Test Categories
 - `unit`: Fast unit tests with mocks (297 tests)
-- `integration`: Tests with real Customer.IO API (9 test files)
+- `integration`: Tests with real Customer.IO API
+- `read_only`: Safe tests for eternal data mode
+- `mutation`: Tests that modify data (use carefully)
 - `slow`: Longer-running tests
-- `api`: Tests requiring API credentials
+
+#### Test Data Markers
+- `@pytest.mark.eternal_data("user")`: Requires eternal user data
+- `@pytest.mark.read_only`: Safe for eternal data mode
+- `@pytest.mark.mutation`: Modifies data, handle carefully
 
 ### Code Quality
 
@@ -325,21 +383,56 @@ ruff check --fix . && ruff format . && mypy utils/ && pytest tests/unit/
 
 ### Real API Testing
 
-The project includes comprehensive integration tests that work with the actual Customer.IO API:
+The project includes comprehensive integration tests that work with actual Customer.IO APIs using **different strategies per API**:
 
-#### Setup Integration Testing
+#### Pipelines API Integration Testing
+
 1. **Get API Credentials**: Obtain your Customer.IO API key
 2. **Configure Environment**:
    ```bash
-   export CUSTOMERIO_API_KEY="your_api_key"
-   export CUSTOMERIO_REGION="us"  # or "eu"
+   # Create .env file with credentials
+   CUSTOMERIO_API_KEY=your_api_key
+   CUSTOMERIO_REGION=us  # or "eu"
+   
+   # Enable eternal data mode (recommended)
+   TEST_DATA_MODE=eternal
+   ETERNAL_DATA_ENABLED=true
    ```
-3. **Run Integration Tests**:
+
+3. **Setup Eternal Test Data** (recommended):
    ```bash
-   pytest tests/integration/ -v
+   # Create permanent test data (one-time setup)
+   python setup_eternal_data.py --create
+   ```
+
+4. **Run Pipelines API Tests**:
+   ```bash
+   # Run safe read-only tests
+   pytest tests/pipelines_api/integration/ -m "read_only" -v
+   
+   # Run all Pipelines API tests
+   pytest tests/pipelines_api/integration/ -v
+   ```
+
+#### App API Integration Testing
+
+1. **Get App API Token**: Obtain your Customer.IO App API Bearer token
+2. **Configure Environment**:
+   ```bash
+   # Add App API credentials to .env file
+   CUSTOMERIO_APP_API_TOKEN=your_app_api_token_here
+   CUSTOMERIO_REGION=us  # or "eu"
+   ```
+
+3. **Run App API Tests** (no setup required):
+   ```bash
+   # Run App API integration tests (simple email-based approach)
+   pytest tests/app_api/integration/ -v
    ```
 
 #### Integration Test Coverage
+
+**Pipelines API Tests:**
 - **People Management**: User identification, suppression, deletion
 - **Event Tracking**: Custom events, semantic events, video, mobile
 - **Device Management**: Device registration, updates, deletion
@@ -349,20 +442,48 @@ The project includes comprehensive integration tests that work with the actual C
 - **Video Events**: Playback lifecycle, content tracking
 - **GDPR Compliance**: User suppression, data deletion
 
+**App API Tests:**
+- **Transactional Messaging**: Email sending using identifiers and direct email
+- **Broadcast Triggers**: Campaign triggering with configuration
+- **Push Notifications**: Mobile push notification delivery
+- **Error Handling**: API error response validation
+- **Unicode Support**: International content handling
+
 #### Key Integration Test Features
-- **Automatic Cleanup**: Tests clean up created resources
-- **Rate Limiting**: Respects Customer.IO API limits
+
+**Pipelines API Features:**
+- **Eternal Data System**: Eliminates test data pollution with permanent test data
+- **Smart Data Mode**: Automatically uses eternal data when available
+- **Test Categorization**: Read-only vs mutation tests for safe execution
+- **Complex Resource Tracking**: Manages relationships between users, devices, objects
+
+**App API Features:**
+- **Direct Email Testing**: No customer creation needed, uses email addresses directly
+- **Automatic Cleanup**: Self-contained tests with no persistent data
+- **Simple Configuration**: Just requires API token, no complex setup
+
+**Shared Features:**
+- **Rate Limiting**: Respects Customer.IO API limits with built-in throttling
 - **Error Handling**: Tests both success and failure scenarios
 - **Real API Patterns**: Validates actual API behavior
 
 ### Authentication
 
-**Important**: Customer.IO Data Pipelines API uses **Basic Authentication**, not Bearer tokens:
+Customer.IO APIs use **different authentication methods**:
 
+#### Pipelines API - Basic Authentication
 ```python
-# Correct authentication pattern discovered through integration testing
+# Pipelines API uses Basic Authentication
 client = CustomerIOClient(api_key="your_api_key", region="us")
 # This creates Basic auth header: Authorization: Basic base64(api_key:)
+```
+
+#### App API - Bearer Token Authentication
+```python
+# App API uses Bearer Token Authentication
+from src.app_api.auth import AppAPIAuth
+auth = AppAPIAuth(api_token="your_app_api_token", region="us")
+# This creates Bearer auth header: Authorization: Bearer your_app_api_token
 ```
 
 ## Jupyter Notebooks
