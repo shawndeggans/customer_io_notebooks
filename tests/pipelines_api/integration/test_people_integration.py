@@ -12,6 +12,8 @@ import pytest
 from datetime import datetime, timezone
 
 from tests.pipelines_api.integration.base import BaseIntegrationTest
+from tests.eternal_config import eternal_config
+from tests.eternal_utils import get_test_user_data
 from tests.pipelines_api.integration.utils import (
     generate_test_traits,
     generate_test_email,
@@ -31,25 +33,41 @@ from src.pipelines_api.exceptions import CustomerIOError, ValidationError
 class TestPeopleIntegration(BaseIntegrationTest):
     """Integration tests for people management functionality."""
     
-    def test_identify_user_basic(self, authenticated_client, test_user_id):
+    @pytest.mark.read_only
+    @pytest.mark.eternal_data("user")
+    def test_identify_user_basic(self, authenticated_client, test_user_id, eternal_data_check):
         """Test basic user identification."""
-        # Arrange
-        traits = {
-            "email": generate_test_email("identify"),
-            "first_name": "Test",
-            "last_name": "User",
-            "plan": "basic"
-        }
+        # Get user data based on current mode
+        user_data = get_test_user_data("basic")
         
-        # Act
-        result = identify_user(authenticated_client, test_user_id, traits)
-        self.track_user(test_user_id)
+        if eternal_config.is_eternal_mode and user_data:
+            # Use eternal data - just verify it exists (read-only test)
+            user_id = user_data["id"]
+            traits = user_data["traits"]
+            
+            # This is a read-only test in eternal mode
+            # We can re-identify the user but not modify core data
+            result = identify_user(authenticated_client, user_id, traits)
+            
+        else:
+            # Create mode - use provided test_user_id
+            traits = {
+                "email": generate_test_email("identify"),
+                "first_name": "Test",
+                "last_name": "User",
+                "plan": "basic"
+            }
+            
+            # Act
+            result = identify_user(authenticated_client, test_user_id, traits)
+            self.track_user(test_user_id)
         
         # Assert
         self.assert_successful_response(result)
         
-        # Cleanup
-        self.cleanup_user(authenticated_client, test_user_id)
+        # Cleanup only in create mode
+        if not eternal_config.is_eternal_mode:
+            self.cleanup_user(authenticated_client, test_user_id)
     
     def test_identify_user_with_complex_traits(self, authenticated_client, test_user_id):
         """Test user identification with complex nested traits."""
@@ -167,33 +185,48 @@ class TestPeopleIntegration(BaseIntegrationTest):
         # Final cleanup
         self.cleanup_user(authenticated_client, test_user_id)
     
-    def test_suppress_and_unsuppress_user(self, authenticated_client, test_user_id):
+    @pytest.mark.mutation
+    @pytest.mark.eternal_data("user")
+    def test_suppress_and_unsuppress_user(self, authenticated_client, test_user_id, eternal_data_check):
         """Test user suppression and unsuppression."""
-        # Arrange - Create user first
-        user_data = {
-            "userId": test_user_id,
-            "traits": {
-                "email": generate_test_email("suppress"),
-                "first_name": "Suppress",
-                "last_name": "Test"
+        # Get user data based on current mode
+        user_data = get_test_user_data("suppression")  # Use dedicated suppression test user
+        
+        if eternal_config.is_eternal_mode and user_data:
+            # Use eternal suppression test user
+            user_id = user_data["id"]
+            
+            # Ensure user exists (re-identify if needed)
+            identify_user(authenticated_client, user_id, user_data["traits"])
+            
+        else:
+            # Create mode - create new user for testing
+            user_data = {
+                "userId": test_user_id,
+                "traits": {
+                    "email": generate_test_email("suppress"),
+                    "first_name": "Suppress",
+                    "last_name": "Test"
+                }
             }
-        }
-        identify_user(authenticated_client, user_data["userId"], user_data["traits"])
-        self.track_user(test_user_id)
+            user_id = test_user_id
+            identify_user(authenticated_client, user_data["userId"], user_data["traits"])
+            self.track_user(test_user_id)
         
         # Act - Suppress user
-        suppress_result = suppress_user(authenticated_client, test_user_id)
+        suppress_result = suppress_user(authenticated_client, user_id)
         self.assert_successful_response(suppress_result)
         
         # Wait for eventual consistency
         self.wait_for_eventual_consistency()
         
-        # Act - Unsuppress user
-        unsuppress_result = unsuppress_user(authenticated_client, test_user_id)
+        # Act - Unsuppress user (restore to normal state)
+        unsuppress_result = unsuppress_user(authenticated_client, user_id)
         self.assert_successful_response(unsuppress_result)
         
-        # Cleanup
-        self.cleanup_user(authenticated_client, test_user_id)
+        # Cleanup only in create mode
+        if not eternal_config.is_eternal_mode:
+            self.cleanup_user(authenticated_client, test_user_id)
     
     def test_gdpr_suppress_profile(self, authenticated_client, test_user_id):
         """Test GDPR profile suppression."""
