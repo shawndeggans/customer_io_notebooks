@@ -2,49 +2,76 @@
 
 ## Project Overview
 
-Create a comprehensive Python client library for the Customer.IO Data Pipelines API using Test-Driven Development (TDD), with Jupyter notebooks serving as the interface for data engineers to interact with the API.
+Create a comprehensive Python client library for all Customer.IO APIs using Test-Driven Development (TDD), with Jupyter notebooks and production deployment tools for data engineers.
 
 ## Core Objectives
 
-1. **Complete API Coverage**: Implement all endpoints defined in cio_pipelines_api.json
+1. **Complete Multi-API Coverage**: Implement Data Pipelines API, App/Journeys API, and Webhook processing
 2. **Test-Driven Development**: Every feature starts with a failing test
-3. **Clean Client Library**: Well-structured utils modules following Python best practices
+3. **Clean Client Library**: Well-structured modules following Python best practices
 4. **Practical Notebooks**: Clear demonstration notebooks for data engineers
 5. **Production Ready**: Robust error handling, proper authentication, rate limiting
+6. **Databricks Integration**: Production webhook processing with Delta Lake analytics
 
 ## Architecture Requirements
 
-### Utils Module Structure
+### Multi-API Module Structure
 
 ```
-utils/
-├── __init__.py                 # Package initialization
-├── api_client.py              # Base API client with auth and common functionality
-├── people_manager.py          # People identification, deletion, suppression
-├── event_manager.py           # Custom and semantic event tracking
-├── object_manager.py          # Objects and relationships management
-├── device_manager.py          # Device registration and management
-├── batch_manager.py           # Batch operations
-├── validators.py              # Input validation utilities
-└── exceptions.py              # Custom exception classes
+src/
+├── pipelines_api/             # Data Pipelines API client library
+│   ├── __init__.py
+│   ├── api_client.py          # Base API client with Basic auth
+│   ├── people_manager.py      # People identification, deletion, suppression
+│   ├── event_manager.py       # Custom and semantic event tracking
+│   ├── object_manager.py      # Objects and relationships management
+│   ├── device_manager.py      # Device registration and management
+│   ├── batch_manager.py       # Batch operations
+│   ├── validators.py          # Input validation utilities
+│   └── exceptions.py          # Custom exception classes
+├── app_api/                   # App/Journeys API client library
+│   ├── __init__.py
+│   ├── auth.py                # Bearer token authentication
+│   └── client.py              # Customer management, messaging
+└── webhooks/                  # Webhook processing utilities
+    ├── __init__.py
+    ├── processor.py           # Signature verification, event parsing
+    ├── event_handlers.py      # Event handlers for all Customer.io event types
+    └── config_manager.py      # Webhook configuration and management
+```
+
+### Production Deployment Structure
+
+```
+databricks_app/                # Databricks App for webhook processing
+├── app.py                     # Main Flask webhook receiver
+├── config.py                  # Configuration and secrets management
+├── requirements.txt           # App dependencies
+├── databricks.yml             # Deployment configuration
+├── test_webhook.py            # Webhook testing utilities
+└── README.md                  # Deployment guide
 ```
 
 ### Test Structure
 
 ```
 tests/
-├── unit/                      # Fast, isolated tests with mocks
-│   ├── test_api_client.py
-│   ├── test_people_manager.py
-│   ├── test_event_manager.py
-│   ├── test_object_manager.py
-│   ├── test_device_manager.py
-│   ├── test_batch_manager.py
-│   └── test_validators.py
-└── integration/               # Tests with actual Customer.IO API
-    ├── test_people_integration.py
-    ├── test_event_integration.py
-    └── test_batch_integration.py
+├── pipelines_api/
+│   ├── unit/                  # Fast, isolated tests with mocks
+│   │   ├── test_api_client.py
+│   │   ├── test_people_manager.py
+│   │   └── [other unit tests]
+│   └── integration/           # Tests with actual Customer.IO API
+│       ├── test_people_integration.py
+│       ├── test_event_integration.py
+│       └── [other integration tests]
+├── app_api/
+│   ├── unit/                  # Unit tests with mocks
+│   └── integration/           # Simple integration tests
+└── webhooks/
+    └── unit/                  # Comprehensive webhook testing
+        ├── test_processor.py
+        └── test_event_handlers.py
 ```
 
 ### Notebook Structure

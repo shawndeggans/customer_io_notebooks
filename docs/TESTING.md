@@ -125,26 +125,39 @@ pytest tests/app_api/integration/ -v
 - Push notification delivery
 - Error handling verification
 
-### Webhooks API - Unit Testing Only
+### Webhooks API - Complete Production Testing
 
-The **Webhooks** processing uses **unit testing with mocked payloads**:
+The **Webhooks** processing uses **comprehensive unit testing with production-ready components**:
 
 **Key Features:**
-- **Signature Verification**: Tests webhook signature validation
-- **Event Parsing**: Tests payload parsing and event handling
-- **Mock-based**: Uses sample webhook payloads for testing
-- **Fast Execution**: No external API dependencies
+- **HMAC-SHA256 Signature Verification**: Tests Customer.io webhook signature validation (v0:timestamp:body format)
+- **All Event Types**: Tests all 7 Customer.io event types (email, customer, SMS, push, in-app, Slack, webhook)
+- **Event Handler Testing**: Comprehensive testing of event-specific processing and analytics formatting
+- **Databricks App Testing**: Complete Flask application testing with realistic webhook payloads
+- **Configuration Management**: Tests webhook setup and management via Customer.io App API
 
 **Running Webhook Tests:**
 ```bash
-# Webhook unit tests
+# All webhook unit tests
 pytest tests/webhooks/unit/ -v
+
+# Specific test categories
+pytest tests/webhooks/unit/test_processor.py -v        # Signature verification
+pytest tests/webhooks/unit/test_event_handlers.py -v  # Event processing
 ```
 
-**Use Cases:**
-- Webhook signature validation
-- Event payload parsing
-- Delivery tracking
+**Test Coverage:**
+- Webhook signature verification with timestamp validation
+- Event parsing and routing for all Customer.io event types
+- Event handler processing for analytics-ready data
+- Error handling and edge cases
+- Webhook configuration management
+
+**Production Components Tested:**
+- Complete Databricks App (`databricks_app/`) functionality
+- Delta Lake integration and data formatting
+- Security validation and error handling
+- Webhook simulation utilities for development
 
 ### Choosing the Right Approach
 
