@@ -68,6 +68,36 @@ result = track_event(
 )
 ```
 
+### Webhook Processing
+
+```python
+from src.webhooks import verify_signature, get_event_handler
+
+# Verify Customer.io webhook signature
+is_valid = verify_signature(
+    payload=webhook_body,
+    signature=request.headers.get('X-CIO-Signature'),
+    timestamp=request.headers.get('X-CIO-Timestamp'),
+    secret=webhook_secret
+)
+
+# Process webhook event
+if is_valid:
+    handler = get_event_handler("email")  # or "customer", "sms", "push", etc.
+    processed_event = handler.handle_event(event_data)
+```
+
+### Databricks App Deployment
+
+```bash
+# Deploy webhook receiver to Databricks
+cd databricks_app
+databricks apps deploy --config databricks.yml
+
+# Test webhook endpoint
+python test_webhook.py
+```
+
 ### Testing Approaches
 
 This project uses **different testing strategies** for each API based on their complexity:
@@ -110,6 +140,20 @@ pytest tests/app_api/integration/ -v
 - **Automatic cleanup**: Tests are self-contained
 - **Communications focus**: Tests transactional emails, broadcasts, push notifications
 
+#### Webhook Processing - Unit Testing
+The Webhook Processing uses **unit testing** with mocked webhook payloads:
+
+```bash
+# Run webhook tests (no external dependencies)
+pytest tests/webhooks/unit/ -v
+```
+
+**Webhook Testing Features:**
+- **Signature verification testing**: HMAC-SHA256 validation per Customer.io spec
+- **Event handler testing**: All 7 Customer.io event types (email, SMS, push, etc.)
+- **Databricks App testing**: Complete webhook receiver application
+- **Mock webhook payloads**: Realistic Customer.io webhook event simulation
+
 See [TESTING.md](docs/TESTING.md) for comprehensive testing documentation.
 
 ## Project Structure
@@ -132,15 +176,36 @@ customer_io_notebooks/
 │   ├── cio_journeys_app_api.json       # App/Journeys API spec
 │   └── cio_reporting_webhooks.json     # Webhook events spec
 ├── TODO.md                             # Development progress tracking
+├── databricks_app/                    # Databricks App for webhook processing
+│   ├── app.py                          # Main Flask webhook receiver
+│   ├── config.py                       # Configuration and secrets management
+│   ├── requirements.txt                # App dependencies
+│   ├── databricks.yml                  # Deployment configuration
+│   ├── test_webhook.py                 # Webhook testing utilities
+│   └── README.md                       # Deployment guide
 │
-├── 00_setup_and_configuration.ipynb   # Basic setup and authentication
-├── 01_people_management.ipynb          # User identification and management
-├── 02_event_tracking.ipynb             # Event tracking and semantic events
-├── 03_objects_and_relationships.ipynb # Objects and relationships management
-├── 04_device_management.ipynb          # Device registration and management
-├── 05_batch_operations.ipynb           # Bulk operations and batch processing
-├── 06_page_screen_tracking.ipynb      # Page and screen tracking
-├── 07_profile_aliasing.ipynb           # Profile aliasing and identity management
+├── notebooks/                         # Jupyter notebooks organized by API
+│   ├── 00_multi_api_overview.ipynb    # Multi-API workflow demonstration
+│   ├── pipelines_api/                 # Data Pipelines API notebooks
+│   │   ├── 00_setup_and_configuration.ipynb   # Basic setup and authentication
+│   │   ├── 01_people_management.ipynb          # User identification and management
+│   │   ├── 02_event_tracking.ipynb             # Event tracking and semantic events
+│   │   ├── 03_objects_and_relationships.ipynb # Objects and relationships management
+│   │   ├── 04_device_management.ipynb          # Device registration and management
+│   │   ├── 05_batch_operations.ipynb           # Bulk operations and batch processing
+│   │   ├── 06_page_screen_tracking.ipynb      # Page and screen tracking
+│   │   └── 07_profile_aliasing.ipynb           # Profile aliasing and identity management
+│   ├── app_api/                       # App API notebooks
+│   │   └── 01_communications.ipynb     # Transactional emails, broadcasts, push
+│   └── webhooks/                      # Webhook processing notebooks
+│       └── 01_webhook_processing.ipynb # Complete webhook implementation demo
+├── data_models/                       # SQL data models for Databricks
+│   ├── README.md                      # Data models documentation
+│   ├── 01_core_people.sql             # People management tables
+│   ├── 02_events.sql                  # Event tracking tables
+│   ├── 10_app_api_communications.sql  # App API analytics tables
+│   ├── 11_webhook_events.sql          # Webhook events analytics tables
+│   └── 99_create_all.sql              # Master creation script
 │
 ├── src/                                # Source code organized by API
 │   ├── pipelines_api/                  # Data Pipelines API client library
@@ -166,7 +231,9 @@ customer_io_notebooks/
 │   │   └── client.py                   # Customer management, messaging
 │   └── webhooks/                       # Webhook processing utilities
 │       ├── __init__.py
-│       └── processor.py                # Signature verification, event parsing
+│       ├── processor.py                # Signature verification, event parsing
+│       ├── event_handlers.py           # Event handlers for all Customer.io event types
+│       └── config_manager.py           # Webhook configuration and management
 │
 └── tests/                              # Comprehensive test suite
     ├── conftest.py                     # Global test configuration
@@ -189,15 +256,20 @@ customer_io_notebooks/
     │       ├── test_event_integration.py
     │       └── [other integration tests]
     ├── app_api/                        # App API tests
-    │   ├── unit/
-    │   └── integration/
+    │   ├── unit/                       # Unit tests with mocks
+    │   │   ├── test_auth.py
+    │   │   └── test_client.py
+    │   └── integration/                # Simple integration tests
+    │       └── test_messaging_integration.py
     └── webhooks/                       # Webhook tests
-        └── unit/
+        └── unit/                       # Unit tests for webhook processing
+            ├── test_processor.py       # Signature verification tests
+            └── test_event_handlers.py  # Event handler tests
 ```
 
 ## Core Components
 
-### API Client (`utils/api_client.py`)
+### API Client (`src/pipelines_api/api_client.py`)
 
 The `CustomerIOClient` provides a robust interface to the Customer.IO Data Pipelines API with:
 
@@ -208,7 +280,7 @@ The `CustomerIOClient` provides a robust interface to the Customer.IO Data Pipel
 - **Request/Response Logging**: Built-in logging capabilities
 
 ```python
-from utils.api_client import CustomerIOClient
+from src.pipelines_api.api_client import CustomerIOClient
 
 # Initialize with Basic authentication
 client = CustomerIOClient(
@@ -219,13 +291,13 @@ client = CustomerIOClient(
 )
 ```
 
-### Utils Modules
+### Pipelines API Modules
 
-Each utils module provides specific Customer.IO functionality:
+Each module provides specific Customer.IO Data Pipelines functionality:
 
-#### People Management (`utils/people_manager.py`)
+#### People Management (`src/pipelines_api/people_manager.py`)
 ```python
-from utils.people_manager import identify_user, delete_user, suppress_user, unsuppress_user
+from src.pipelines_api.people_manager import identify_user, delete_user, suppress_user, unsuppress_user
 
 # User identification
 identify_user(client, user_id, traits)
@@ -238,9 +310,9 @@ unsuppress_user(client, user_id)
 delete_user(client, user_id)
 ```
 
-#### Event Tracking (`utils/event_manager.py`)
+#### Event Tracking (`src/pipelines_api/event_manager.py`)
 ```python
-from utils.event_manager import track_event, track_page_view, track_screen_view
+from src.pipelines_api.event_manager import track_event, track_page_view, track_screen_view
 
 # Custom events
 track_event(client, user_id, event_name, properties)
@@ -250,47 +322,107 @@ track_page_view(client, user_id, page_name, properties)
 track_screen_view(client, user_id, screen_name, properties)
 ```
 
-#### Device Management (`utils/device_manager.py`)
+#### Device Management (`src/pipelines_api/device_manager.py`)
 ```python
-from utils.device_manager import register_device, update_device, delete_device
+from src.pipelines_api.device_manager import register_device, update_device, delete_device
 
 # Device registration (requires user_id, device_token, device_type)
 register_device(client, user_id, device_token, device_type="ios", metadata={})
 ```
 
-#### Objects and Relationships (`utils/object_manager.py`)
+#### Objects and Relationships (`src/pipelines_api/object_manager.py`)
 ```python
-from utils.object_manager import create_object, update_object, delete_object
+from src.pipelines_api.object_manager import create_object, update_object, delete_object
 
 # Object management (requires user_id, object_id, traits)
 create_object(client, user_id, object_id, traits, object_type_id="1")
 ```
 
-#### Video Events (`utils/video_manager.py`)
+#### Video Events (`src/pipelines_api/video_manager.py`)
 ```python
-from utils.video_manager import track_video_playback_started, track_video_playback_completed
+from src.pipelines_api.video_manager import track_video_playback_started, track_video_playback_completed
 
 # Video tracking (requires video_id as separate parameter)
 track_video_playback_started(client, user_id, video_id, properties)
 ```
 
-#### E-commerce Events (`utils/ecommerce_manager.py`)
+#### E-commerce Events (`src/pipelines_api/ecommerce_manager.py`)
 ```python
-from utils.ecommerce_manager import track_product_clicked, track_checkout_step_completed
+from src.pipelines_api.ecommerce_manager import track_product_clicked, track_checkout_step_completed
 
 # E-commerce semantic events
 track_product_clicked(client, user_id, properties)
 track_checkout_step_completed(client, user_id, properties)
 ```
 
-#### Batch Operations (`utils/batch_manager.py`)
+#### Batch Operations (`src/pipelines_api/batch_manager.py`)
 ```python
-from utils.batch_manager import send_batch, create_batch_operations
+from src.pipelines_api.batch_manager import send_batch, create_batch_operations
 
 # Batch processing
 operations = create_batch_operations("identify", user_data_list)
 send_batch(client, operations)
 ```
+
+### Webhook Processing (`src/webhooks/`)
+
+The webhook processing system provides secure webhook reception and event processing for all Customer.io event types:
+
+#### Webhook Signature Verification (`src/webhooks/processor.py`)
+```python
+from src.webhooks import verify_signature, parse_event, get_event_type
+
+# Verify Customer.io webhook signature (HMAC-SHA256 with v0:timestamp:body format)
+is_valid = verify_signature(
+    payload=webhook_body,
+    signature=request.headers.get('X-CIO-Signature'),
+    timestamp=request.headers.get('X-CIO-Timestamp'),
+    secret=webhook_secret
+)
+
+# Parse and route webhook events
+event = parse_event(webhook_body)
+object_type, metric = get_event_type(event)  # e.g., ("email", "opened")
+```
+
+#### Event Handlers (`src/webhooks/event_handlers.py`)
+```python
+from src.webhooks import get_event_handler
+
+# Process different event types with dedicated handlers
+email_handler = get_event_handler("email")        # Email events (opened, clicked, etc.)
+customer_handler = get_event_handler("customer")  # Customer subscription events
+sms_handler = get_event_handler("sms")            # SMS delivery events
+push_handler = get_event_handler("push")          # Push notification events
+
+# Process event and get analytics-ready data
+processed_event = email_handler.handle_event(event_data)
+```
+
+#### Webhook Configuration (`src/webhooks/config_manager.py`)
+```python
+from src.webhooks import CustomerIOWebhookManager, setup_databricks_webhook
+
+# Set up webhooks via Customer.io App API
+manager = CustomerIOWebhookManager(api_token="your_app_token", region="us")
+webhook = manager.create_webhook(
+    webhook_url="https://your-databricks-app.com/webhook/customerio",
+    events=["email_opened", "email_clicked", "customer_subscribed"]
+)
+
+# Or use the simplified setup function
+webhook = setup_databricks_webhook(api_token, databricks_url)
+```
+
+### Databricks App (`databricks_app/`)
+
+Production-ready webhook receiver application for Databricks deployment:
+
+- **Flask Application** (`app.py`): Complete webhook endpoint with signature verification
+- **Event Processing**: Automatic routing to event handlers and Delta Lake storage
+- **Configuration Management** (`config.py`): Secure secrets and environment handling
+- **Testing Utilities** (`test_webhook.py`): Complete webhook simulation and testing
+- **Deployment Ready** (`databricks.yml`): One-command deployment to Databricks
 
 ## Development Workflow
 
@@ -345,7 +477,7 @@ pytest tests/integration/ -v
 
 #### Run with coverage
 ```bash
-pytest --cov=utils --cov-report=term-missing --cov-report=html
+pytest --cov=src --cov-report=term-missing --cov-report=html
 ```
 
 #### Test Categories

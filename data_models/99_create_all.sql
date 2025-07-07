@@ -235,6 +235,9 @@ SHOW TABLES IN customerio;
 
 -- App API communications
 \source 10_app_api_communications.sql
+
+-- Webhook events
+\source 11_webhook_events.sql
 */
 
 -- ==================================================

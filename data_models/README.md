@@ -21,7 +21,8 @@ data_models/
 ├── 07_privacy_gdpr.sql                 # GDPR compliance and privacy
 ├── 08_batch_operations.sql             # Batch processing operations
 ├── 09_user_aliases.sql                 # User aliases and profile merging
-└── 10_app_api_communications.sql       # App API message delivery and analytics
+├── 10_app_api_communications.sql       # App API message delivery and analytics
+└── 11_webhook_events.sql               # Webhook events and delivery tracking
 ```
 
 ## Table Descriptions
@@ -160,6 +161,25 @@ data_models/
 - Template and campaign optimization insights
 - Error monitoring and resolution tracking
 - Conversion attribution and ROI analysis
+
+### 11_webhook_events.sql
+**Webhook events and delivery tracking from Customer.IO**
+- `webhook_raw_events` - Raw audit trail of all incoming webhook events
+- `webhook_email_events` - Processed email events (opened, clicked, delivered, etc.)
+- `webhook_customer_events` - Customer subscription and preference events
+- `webhook_sms_events` - SMS message delivery and engagement events
+- `webhook_push_events` - Push notification delivery and engagement events
+- `webhook_in_app_events` - In-app message events
+- `webhook_slack_events` - Slack message events
+- `webhook_webhook_events` - Customer.IO webhook delivery tracking
+
+**Key Features:**
+- Complete webhook event processing for all Customer.IO event types
+- Real-time delivery and engagement tracking
+- Cross-channel customer engagement analytics
+- Campaign and journey performance monitoring
+- Error tracking and delivery failure analysis
+- Customer engagement scoring and segmentation
 
 ## Database Schema
 

@@ -1,0 +1,38 @@
+# Databricks App Configuration
+name: customerio-webhook-processor
+
+artifacts:
+  - path: ./app.py
+    type: PYTHON_FILE
+  - path: ./config.py
+    type: PYTHON_FILE
+  - path: ./requirements.txt
+    type: REQUIREMENTS_FILE
+  - path: ../src/webhooks/processor.py
+    type: PYTHON_FILE
+  - path: ../src/webhooks/event_handlers.py
+    type: PYTHON_FILE
+  - path: ../src/webhooks/__init__.py
+    type: PYTHON_FILE
+
+environments:
+  - name: development
+    compute:
+      name: customer-io-webhook-dev
+      size: SMALL
+    environment_variables:
+      FLASK_ENV: development
+      LOG_LEVEL: DEBUG
+      
+  - name: production
+    compute:
+      name: customer-io-webhook-prod
+      size: MEDIUM
+    environment_variables:
+      FLASK_ENV: production
+      LOG_LEVEL: INFO
+      
+secrets:
+  - key: CUSTOMERIO_WEBHOOK_SECRET
+    scope: customerio
+    name: webhook_signing_key
