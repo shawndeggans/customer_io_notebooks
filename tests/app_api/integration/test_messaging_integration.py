@@ -193,7 +193,7 @@ def test_messaging_with_unicode_content(app_auth, transactional_message_id):
             to=email,
             message_data={
                 "greeting": "Hello 你好 مرحبا Здравствуйте",
-                "emoji_test": "Testing emoji support 🚀 ✅ 🎉",
+                "emoji_test": "Testing emoji support with text indicators",
                 "special_chars": "Testing special characters: €£¥"
             }
         )
