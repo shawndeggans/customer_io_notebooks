@@ -492,6 +492,8 @@ customer_io_notebooks/
 
 **Total Current Status: 469 tests passing (323 pipelines + 66 app + 12 webhooks + 68 misc), 9 notebooks working, 3 APIs partially implemented**
 
+**URGENT**: Notebooks cannot run due to missing utils modules - refactor implementation required before further development.
+
 ### Wave 3A Progress Update (Session 2025-01-01) - CUSTOMER DATA ACCESS COMPLETE ✅
 - **Customer Search Implemented**: `search_customers()` function in `src/app_api/client.py`
 - **Customer Profile Implemented**: `get_customer()` function in `src/app_api/client.py`
@@ -547,6 +549,63 @@ customer_io_notebooks/
   - Enhanced `data_models/README.md` with comprehensive App API documentation
   - Added analytics views for daily performance, campaign leaderboards, and error analysis
 - **Documentation Architecture Updates**: Updated README.md and TESTING.md to reflect App API communications completion
+
+## CURRENT PRIORITY: REFACTOR IMPLEMENTATION - UTILS MODULE ALIGNMENT ⚠️
+
+**CRITICAL ISSUE**: Notebooks reference utils modules that don't exist, causing import failures and preventing pip install.
+
+### Refactor Implementation Status
+
+**Following the detailed plan in `docs/REFACTOR.md`** - 4-phase TDD implementation:
+
+#### Phase 1: Create Missing Utils Modules (TDD Approach)
+- [ ] **Red Phase**: Write failing tests for utils imports (`tests/utils/test_utils_imports.py`)
+- [ ] **Green Phase**: Create minimal bridge modules
+  - [ ] Create `utils/` directory structure (15 modules)
+  - [ ] Create `app_utils/` directory structure (2 modules)
+  - [ ] Create `webhook_utils/` directory structure (3 modules)
+  - [ ] Implement re-export modules with proper type hints
+- [ ] **Refactor Phase**: Add quality measures
+  - [ ] Run `mypy utils/ app_utils/ webhook_utils/ --strict`
+  - [ ] Run `ruff check` and `ruff format` on all utils modules
+  - [ ] Add structured logging if needed
+
+#### Phase 2: Fix Package Configuration (TDD Approach)
+- [ ] **Red Phase**: Write failing tests for pip installation
+- [ ] **Green Phase**: Update setup.py configuration
+  - [ ] Fix dependencies (httpx instead of requests)
+  - [ ] Update package discovery to include utils modules
+  - [ ] Test `pip install -e .` works
+- [ ] **Refactor Phase**: Optimize package configuration
+
+#### Phase 3: Make Package Pip-Installable (TDD Approach)
+- [ ] **Red Phase**: Write failing tests for notebook imports
+- [ ] **Green Phase**: Create proper `__init__.py` files
+- [ ] **Refactor Phase**: Test all notebook imports work
+
+#### Phase 4: Comprehensive Testing (TDD Approach)
+- [ ] **Red Phase**: Write failing tests for performance requirements
+- [ ] **Green Phase**: Run comprehensive test suite
+- [ ] **Refactor Phase**: Performance optimization and documentation
+
+### Quality Gates (MANDATORY for each phase)
+```bash
+# Type checking
+mypy utils/ app_utils/ webhook_utils/ --strict
+
+# Code formatting and linting
+ruff check utils/ app_utils/ webhook_utils/ --fix
+ruff format utils/ app_utils/ webhook_utils/
+
+# Test coverage
+pytest tests/utils/ -v --cov=utils --cov=app_utils --cov=webhook_utils
+```
+
+### Session Continuity
+**CRITICAL**: Update this TODO.md immediately after each task completion. Mark tasks as `[x]` with specific file paths.
+
+### Next Session Action
+**Start with Phase 1 Red Phase**: Create failing tests for utils imports before any implementation.
 
 ## READY FOR MANUAL TESTING ✅
 

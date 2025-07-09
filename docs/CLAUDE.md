@@ -282,6 +282,52 @@ git commit -m "feat: add people management API functions"
 git push origin feature/people-management-api
 ```
 
+## CURRENT PRIORITY: REFACTOR IMPLEMENTATION - UTILS MODULE ALIGNMENT ⚠️
+
+**CRITICAL**: The project has a notebook-source code alignment issue that must be resolved before further development.
+
+### Current Issue
+- **Notebooks import from**: `utils.*`, `app_utils.*`, `webhook_utils.*`
+- **Source code lives in**: `src/pipelines_api/`, `src/app_api/`, `src/webhooks/`
+- **Result**: Notebooks cannot run due to import errors, pip install fails
+
+### Refactor Implementation Plan
+**Follow the detailed plan in `docs/REFACTOR.md`** - This document provides comprehensive step-by-step instructions for implementing the refactor using TDD methodology.
+
+### TDD Implementation Requirements
+**ALL refactor changes MUST follow Test-Driven Development**:
+
+1. **Red Phase**: Write failing tests for utils imports
+2. **Green Phase**: Create minimal bridge modules to pass tests
+3. **Refactor Phase**: Add type hints, docstrings, quality checks
+
+### Quality Gates (MANDATORY)
+Before any refactor step is considered complete:
+```bash
+# Type checking
+mypy utils/ app_utils/ webhook_utils/ --strict
+
+# Code formatting and linting
+ruff check utils/ app_utils/ webhook_utils/ --fix
+ruff format utils/ app_utils/ webhook_utils/
+
+# Test coverage
+pytest tests/utils/ -v --cov=utils --cov=app_utils --cov=webhook_utils
+```
+
+### Session Continuity Requirements
+**CRITICAL for multi-session work**:
+- **Update TODO.md immediately** after each refactor step completion
+- **Mark tasks as `[x]` completed** with specific file paths
+- **Test all changes** before marking complete
+- **Document any issues** discovered during implementation
+
+### Next Steps
+1. **Start with Phase 1**: Create utils bridge modules (see REFACTOR.md Phase 1)
+2. **Follow TDD**: Write failing tests first, then minimal implementation
+3. **Update TODO.md**: Mark each completed task immediately
+4. **Test thoroughly**: Ensure notebooks run after each phase
+
 ## Important Guidelines
 
 ### What TO Do
