@@ -5,11 +5,11 @@ from setuptools import setup, find_packages
 setup(
     name="customerio-api-client",
     version="1.0.0",
-    description="Complete Python client library for Customer.IO APIs",
+    description="Complete Python client library for Customer.IO APIs with notebook compatibility bridge modules",
     author="Customer.IO Integration Team",
     author_email="support@example.com",
-    packages=find_packages(where="src"),
-    package_dir={"": "src"},
+    packages=find_packages(where="src") + ["utils", "app_utils", "webhook_utils"],
+    package_dir={"": "src", "utils": "utils", "app_utils": "app_utils", "webhook_utils": "webhook_utils"},
     python_requires=">=3.11",
     install_requires=[
         "requests>=2.28.0",
