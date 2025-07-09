@@ -72,12 +72,12 @@ def test_webhook_endpoint(webhook_url: str, signing_key: str):
         print(f"Response Body: {response.text}")
         
         if response.status_code == 200:
-            print("\n✅ Webhook test successful!")
+            print("\nSUCCESS: Webhook test successful!")
         else:
-            print("\n❌ Webhook test failed!")
+            print("\nERROR: Webhook test failed!")
             
     except Exception as e:
-        print(f"\n❌ Error testing webhook: {e}")
+        print(f"\nERROR: Error testing webhook: {e}")
 
 
 def test_health_endpoint(base_url: str):
@@ -91,12 +91,12 @@ def test_health_endpoint(base_url: str):
         print(f"Response Body: {json.dumps(response.json(), indent=2)}")
         
         if response.status_code == 200:
-            print("\n✅ Health check successful!")
+            print("\nSUCCESS: Health check successful!")
         else:
-            print("\n❌ Health check failed!")
+            print("\nERROR: Health check failed!")
             
     except Exception as e:
-        print(f"\n❌ Error testing health endpoint: {e}")
+        print(f"\nERROR: Error testing health endpoint: {e}")
 
 
 def test_various_events(webhook_url: str, signing_key: str):
@@ -160,12 +160,12 @@ def test_various_events(webhook_url: str, signing_key: str):
             print(f"Response Status: {response.status_code}")
             
             if response.status_code == 200:
-                print(f"✅ {event_name} test successful!")
+                print(f"SUCCESS: {event_name} test successful!")
             else:
-                print(f"❌ {event_name} test failed: {response.text}")
+                print(f"ERROR: {event_name} test failed: {response.text}")
                 
         except Exception as e:
-            print(f"❌ Error testing {event_name}: {e}")
+            print(f"ERROR: Error testing {event_name}: {e}")
 
 
 if __name__ == "__main__":

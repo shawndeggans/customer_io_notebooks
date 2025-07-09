@@ -216,10 +216,10 @@ class TestEventIntegration(BaseIntegrationTest):
         result = track_event(
             authenticated_client,
             test_user_id,
-            "Special Event 🎉",
+            "Special Event with celebration",
             {
                 "description": "Event with émojis and spëcial chars",
-                "unicode_text": "Hello 世界 🌍",
+                "unicode_text": "Hello 世界 world",
                 "symbols": "!@#$%^&*()",
                 "url": "https://example.com/path?param=value&other=123"
             }

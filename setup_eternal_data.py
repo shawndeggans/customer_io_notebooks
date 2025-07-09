@@ -75,7 +75,7 @@ class EternalDataSetup:
         results = {}
         users = ETERNAL_TEST_DATA["users"]
         
-        print(f"\n📱 Setting up {len(users)} eternal test users...")
+        print(f"\nSetting up {len(users)} eternal test users...")
         
         for user_type, user_data in users.items():
             user_id = user_data["id"]
@@ -107,11 +107,11 @@ class EternalDataSetup:
                 time.sleep(0.1)
                 
             except CustomerIOError as e:
-                print(f"    ❌ Failed: {e}")
+                print(f"    ERROR: Failed: {e}")
                 results[user_type] = False
                 self.failed_count += 1
             except Exception as e:
-                print(f"    ❌ Unexpected error: {e}")
+                print(f"    ERROR: Unexpected error: {e}")
                 results[user_type] = False
                 self.failed_count += 1
         
@@ -130,7 +130,7 @@ class EternalDataSetup:
         devices = ETERNAL_TEST_DATA["devices"]
         users = ETERNAL_TEST_DATA["users"]
         
-        print(f"\n📱 Setting up {len(devices)} eternal test devices...")
+        print(f"\nSetting up {len(devices)} eternal test devices...")
         
         # Use basic user for device registration
         basic_user_id = users["basic"]["id"]
@@ -165,11 +165,11 @@ class EternalDataSetup:
                 time.sleep(0.1)
                 
             except CustomerIOError as e:
-                print(f"    ❌ Failed: {e}")
+                print(f"    ERROR: Failed: {e}")
                 results[device_type] = False
                 self.failed_count += 1
             except Exception as e:
-                print(f"    ❌ Unexpected error: {e}")
+                print(f"    ERROR: Unexpected error: {e}")
                 results[device_type] = False
                 self.failed_count += 1
         
@@ -224,11 +224,11 @@ class EternalDataSetup:
                 time.sleep(0.1)
                 
             except CustomerIOError as e:
-                print(f"    ❌ Failed: {e}")
+                print(f"    ERROR: Failed: {e}")
                 results[object_key] = False
                 self.failed_count += 1
             except Exception as e:
-                print(f"    ❌ Unexpected error: {e}")
+                print(f"    ERROR: Unexpected error: {e}")
                 results[object_key] = False
                 self.failed_count += 1
         
@@ -246,7 +246,7 @@ class EternalDataSetup:
         results = {}
         relationships = ETERNAL_TEST_DATA["relationships"]
         
-        print(f"\n🔗 Setting up {len(relationships)} eternal test relationships...")
+        print(f"\nSetting up {len(relationships)} eternal test relationships...")
         
         for i, rel_data in enumerate(relationships):
             user_id = rel_data["user_id"]
@@ -282,11 +282,11 @@ class EternalDataSetup:
                 time.sleep(0.1)
                 
             except CustomerIOError as e:
-                print(f"    ❌ Failed: {e}")
+                print(f"    ERROR: Failed: {e}")
                 results[rel_key] = False
                 self.failed_count += 1
             except Exception as e:
-                print(f"    ❌ Unexpected error: {e}")
+                print(f"    ERROR: Unexpected error: {e}")
                 results[rel_key] = False
                 self.failed_count += 1
         
@@ -311,7 +311,7 @@ class EternalDataSetup:
             "objects": {}
         }
         
-        print("\n🔍 Verifying eternal test data exists...")
+        print("\nVerifying eternal test data exists...")
         
         # Check users (this is a simplified check - in real implementation
         # you'd need to add API methods to check if users exist)
@@ -341,14 +341,14 @@ class EternalDataSetup:
             print("Cleanup cancelled.")
             return
         
-        print("🗑️  Removing eternal test data...")
+        print("Removing eternal test data...")
         # Implementation would delete users, objects, devices, etc.
         # This is intentionally not implemented to prevent accidental data loss
-        print("❌ Cleanup not implemented for safety. Remove data manually if needed.")
+        print("ERROR: Cleanup not implemented for safety. Remove data manually if needed.")
     
     def run_setup(self) -> None:
         """Run the complete setup process."""
-        print(f"🚀 Setting up eternal test data (Version: {ETERNAL_DATA_VERSION})")
+        print(f"Setting up eternal test data (Version: {ETERNAL_DATA_VERSION})")
         print(f"   Mode: {'DRY RUN' if self.dry_run else 'LIVE EXECUTION'}")
         
         if not self.dry_run:
@@ -365,7 +365,7 @@ class EternalDataSetup:
         relationship_results = self.setup_relationships()
         
         # Summary
-        print(f"\n📊 Setup Summary:")
+        print(f"\nSetup Summary:")
         print(f"   Created: {self.created_count}")
         print(f"   Skipped: {self.skipped_count}")
         print(f"   Failed: {self.failed_count}")
@@ -376,7 +376,7 @@ class EternalDataSetup:
             print("1. Update TEST_DATA_MODE=eternal in your .env file")
             print("2. Run integration tests: pytest tests/integration/ -m 'read_only'")
         else:
-            print("❌ Some data creation failed. Check the errors above.")
+            print("ERROR: Some data creation failed. Check the errors above.")
 
 def main():
     """Main entry point."""
@@ -420,7 +420,7 @@ def main():
             setup.cleanup_data()
             
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"ERROR: Error: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
